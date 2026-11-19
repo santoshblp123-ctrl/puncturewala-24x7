@@ -1,0 +1,21 @@
+{
+  "name": "puncturewala-24x7",
+  "version": "1.0.0",
+  "description": "PunctureWala 24x7 - On Demand Roadside Tyre & Puncture Service with Admin Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "puncture",
+    "puncturewala",
+    "roadside-assistance",
+    "admin-dashboard",
+    "mechanic"
+  ],
+  "author": "Santosh",
+  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

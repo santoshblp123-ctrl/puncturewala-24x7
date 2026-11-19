@@ -29,13 +29,32 @@ Built with **HTML + Tailwind CSS + Vanilla JS**. No build step required — open
 
 ```
 puncturewala-24x7/
-├── index.html      ← Complete single-file app
-└── README.md       ← This file
+├── index.html        ← Customer Booking App (Frontend)
+├── admin/
+│   └── index.html    ← Admin Dashboard & Management Portal
+├── server.js         ← Unified Node.js Server & Real-time SSE Relay
+├── package.json      ← Node project configuration (npm start)
+├── manifest.json     ← PWA Web App Manifest
+├── sw.js             ← Offline Service Worker
+└── README.md         ← Documentation
 ```
 
-## 🚀 Getting Started
+## 🚀 Deployment (Hostinger & Single-Port Production)
 
-Just open `index.html` in any modern browser. No server or build tools needed.
+- **Entry Point**: `server.js` (starts via `npm start`)
+- **Port**: Uses `process.env.PORT` automatically
+- **Routes**:
+  - `https://puncherwala.in/` ➔ Customer App
+  - `https://puncherwala.in/admin` ➔ Admin Dashboard
+  - `https://puncherwala.in/api/*` ➔ Real-time SSE & API Relay
+
+## 💻 Local Development
+
+```bash
+npm start
+```
+- Open `http://localhost:3000/` for Customer App
+- Open `http://localhost:3000/admin` for Admin Dashboard
 
 ## 🔧 Planned Improvements
 
