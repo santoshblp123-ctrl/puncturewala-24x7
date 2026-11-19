@@ -1,0 +1,2 @@
+rootProject.name = "PunctureWala24x7"
+include ':app'

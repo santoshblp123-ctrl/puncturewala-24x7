@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.PunctureWala" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#f59e0b</item>
+        <item name="colorPrimaryDark">#0f172a</item>
+        <item name="colorAccent">#3b82f6</item>
+        <item name="android:statusBarColor">#0f172a</item>
+        <item name="android:navigationBarColor">#0f172a</item>
+    </style>
+</resources>
