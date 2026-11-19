@@ -1963,6 +1963,8 @@
         console.error('Google Sign-In Error:', err);
         if (err.code === 'auth/popup-closed-by-user') {
           showToast('⚠️ लॉगिन विंडो बंद कर दी गई', 'error');
+        } else if (err.code === 'auth/unauthorized-domain') {
+          showToast('⚠️ Firebase Console में puncherwala.in डोमेन को Authorized Domains में जोड़ें', 'error');
         } else if (err.code === 'auth/popup-blocked') {
           showToast('⚠️ ब्राउज़र ने पॉपअप ब्लॉक किया, रीडायरेक्ट किया जा रहा है...', 'info');
           try {
