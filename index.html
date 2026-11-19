@@ -243,17 +243,6 @@
             </svg>
             <span data-i18n="login_google_btn">Google से साइन इन करें</span>
           </button>
-
-          <div class="flex items-center gap-3">
-            <div class="flex-1 h-px bg-slate-700"></div>
-            <span data-i18n="login_or" class="text-slate-600 text-xs font-medium">या</span>
-            <div class="flex-1 h-px bg-slate-700"></div>
-          </div>
-
-          <button onclick="guestLogin()" class="w-full bg-slate-800 border border-slate-700 hover:bg-slate-750 text-slate-300 font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 transition hover:border-slate-600">
-            <i class="fa-solid fa-user text-slate-500"></i>
-            <span data-i18n="login_guest_btn">गेस्ट के रूप में जारी रखें</span>
-          </button>
         </div>
       </div>
 
@@ -1442,7 +1431,7 @@
     // ── Global Server URL Resolution (Hostinger & Localhost Unified) ──
     const SERVER = (function() {
       if (typeof window !== 'undefined' && window.location) {
-        if (window.location.protocol.startsWith('file')) return 'http://localhost:3000';
+        if (window.location.protocol.startsWith('file')) return 'https://puncherwala.in';
         return window.location.origin;
       }
       return 'http://localhost:3000';
