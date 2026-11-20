@@ -305,7 +305,7 @@
         </button>
 
         <!-- 🖥️ Admin Dashboard Link -->
-        <a href="http://localhost:3001" target="_blank" rel="noopener noreferrer" class="w-full text-left px-4 py-2.5 text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center justify-between transition border-t border-slate-100">
+        <a href="/admin" id="admin-dashboard-menu-link" target="_blank" rel="noopener noreferrer" class="w-full text-left px-4 py-2.5 text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center justify-between transition border-t border-slate-100">
           <div class="flex items-center gap-2.5">
             <i class="fa-solid fa-gauge-high text-blue-500 w-4"></i>
             <span>एडमिन पैनल (Admin Dashboard)</span>
@@ -2824,8 +2824,69 @@
       // Do NOT navigate to tracking screen yet — wait for mechanic to start
 
       // Connect SSE in background
-      if (trackSSE) trackSSE.close();
-      trackSSE = new EventSource(`http://localhost:3002/api/track/${orderId}`);
+      if (trackSSE) { try { trackSSE.close(); } catch(e){} }
+      try {
+        trackSSE = new EventSource(`${SERVER}/api/track/${orderId}`);
+      } catch(e) {}
+
+      // Smart Fallback Polling every 3s (guarantees real-time updates even if SSE is buffered)
+      if (window.trackPollInterval) clearInterval(window.trackPollInterval);
+      window.orderAcceptedNotified = false;
+      window.mechanicStartedNotified = false;
+      window.mechanicArrivedNotified = false;
+      window.orderCancelledNotified = false;
+      window.orderDoneNotified = false;
+
+      window.trackPollInterval = setInterval(() => {
+        fetch(`${SERVER}/api/track/${orderId}`)
+          .then(r => r.json())
+          .then(data => {
+            if (!data || !data.order) return;
+            const o = data.order;
+            if (o.status === 'accepted' && !window.orderAcceptedNotified) {
+              window.orderAcceptedNotified = true;
+              showModal('fa-circle-check', 'बुकिंग स्वीकार कर ली गई! 👍', 'एडमिन ने आपकी बुकिंग स्वीकार कर ली है। मैकेनिक कुछ ही देर में रवाना होने वाला है।');
+            }
+            if ((o.status === 'onway' || o.status === 'arrived' || o.status === 'active') && !window.mechanicStartedNotified) {
+              window.mechanicStartedNotified = true;
+              const banner = document.getElementById('mechanic-onway-banner');
+              if (banner) {
+                banner.classList.remove('hidden');
+                banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+            if (o.status === 'arrived' && !window.mechanicArrivedNotified) {
+              window.mechanicArrivedNotified = true;
+              if (o.otp) setCustomerOtp(o.otp);
+              showCustomerOtpModal(o.otp || currentCustomerOtp, true);
+            }
+            if (o.otpVerified || o.status === 'active') {
+              isOrderActiveOnSite = true;
+              closeCustomerOtpModal();
+            }
+            if (o.status === 'cancelled' && !window.orderCancelledNotified) {
+              window.orderCancelledNotified = true;
+              clearInterval(window.trackPollInterval);
+              handleOrderCancelledByAdmin(o.cancelReason);
+            }
+            if (o.status === 'done' && !window.orderDoneNotified) {
+              window.orderDoneNotified = true;
+              clearInterval(window.trackPollInterval);
+              showCompletionCelebrationModal({
+                orderId: o.id,
+                customer: o.customer,
+                service: o.service,
+                amount: o.amount,
+                time: o.time
+              });
+            }
+            if (data.location && data.location.lat && data.location.lng) {
+              if (!trackMap) initTrackMap(custLat, custLng);
+              updateMechanicPin(data.location.lat, data.location.lng, custLat, custLng, data.location.onSite);
+            }
+          })
+          .catch(() => {});
+      }, 3000);
 
       // 1. Order accepted by Admin
       trackSSE.addEventListener('order-accepted', () => {
@@ -3224,7 +3285,7 @@
         comment: comment
       };
 
-      fetch('http://localhost:3002/api/feedback', {
+      fetch(`${SERVER}/api/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
