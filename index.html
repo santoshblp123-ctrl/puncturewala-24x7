@@ -361,39 +361,27 @@
 
       <!-- ================= 1. HOME & MAP SCREEN ================= -->
       <section id="screen-home" class="block">
-        <!-- Live Simulated Map -->
-        <div class="h-60 sm:h-64 bg-slate-200 relative overflow-hidden road-grid flex items-center justify-center border-b border-slate-300">
+        <!-- Real Interactive Map for Customer -->
+        <div class="h-64 sm:h-72 bg-slate-900 relative overflow-hidden border-b border-slate-300">
           
-          <!-- Highway / Road Graphics (Extended edge-to-edge so no white gaps appear) -->
-          <div class="absolute w-[150%] -left-[25%] h-14 bg-slate-400 rotate-[-12deg] flex items-center justify-around border-y-2 border-dashed border-white/80 shadow-sm">
-            <span class="text-[10px] text-white/90 font-mono tracking-widest uppercase">NH-48 EXPRESSWAY</span>
-            <span class="text-[10px] text-white/90 font-mono tracking-widest uppercase hidden sm:inline">DELHI-MEERUT EXPWY</span>
-          </div>
-          <div class="absolute h-[200%] -top-[50%] w-12 bg-slate-400 rotate-[38deg] flex items-center justify-center border-x border-slate-300 shadow-sm"></div>
+          <!-- Leaflet Interactive Map -->
+          <div id="home-customer-map" class="w-full h-full" style="z-index: 1;"></div>
 
-          <!-- Customer Pin (Static Location) -->
-          <div class="absolute top-12 left-10 flex flex-col items-center z-10">
-            <div data-i18n="map_you" class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-md mb-1 whitespace-nowrap">
-              आपकी लोकेशन (You)
+          <!-- Active Confirmed Booking Alert Bar (Top) -->
+          <div id="home-active-booking-banner" onclick="goToLiveTracking()"
+            class="hidden absolute top-3 inset-x-3 bg-gradient-to-r from-emerald-600 via-emerald-700 to-emerald-600 text-white text-xs px-3.5 py-2.5 rounded-2xl shadow-xl border border-emerald-400 flex items-center justify-between z-30 cursor-pointer animate-fade-in hover:brightness-105 transition">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-3 h-3 rounded-full bg-emerald-300 animate-ping shrink-0"></span>
+              <div class="min-w-0">
+                <p class="font-black text-xs leading-tight truncate">🟢 आपकी बुकिंग कन्फर्म है! मेकैनिक लाइव ऑन-वे है</p>
+                <p class="text-[10px] text-emerald-100 truncate mt-0.5">लाइव वैन मैप और ETA देखने के लिए यहाँ टैप करें ➔</p>
+              </div>
             </div>
-            <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg border-2 border-white text-xs">
-              <i class="fa-solid fa-location-dot"></i>
-            </div>
-          </div>
-
-          <!-- Mobile Van Marker (Moving / Dynamic) -->
-          <div id="map-van-marker" class="absolute bottom-14 right-12 flex flex-col items-center z-20 transition-all duration-700">
-            <div id="van-map-bubble" class="bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg border border-amber-400 mb-1 flex items-center gap-1.5 whitespace-nowrap">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span id="van-bubble-text" data-i18n="map_van_dist">वैन 3.5 किमी दूर</span>
-            </div>
-            <div class="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center shadow-xl border-2 border-white text-base font-bold pulse-ring">
-              <i class="fa-solid fa-truck-pickup"></i>
-            </div>
+            <span class="bg-slate-950 text-emerald-400 text-[10px] px-2.5 py-1 rounded-xl font-black shrink-0 shadow">ट्रैक करें</span>
           </div>
 
           <!-- Map Status Pill (Free / Busy Alert) -->
-          <div id="van-busy-banner" class="hidden absolute top-3 inset-x-3 bg-amber-500/95 backdrop-blur-sm text-slate-950 text-xs px-3 py-2 rounded-xl shadow-lg border border-amber-600 flex items-center justify-between z-30">
+          <div id="van-busy-banner" class="hidden absolute top-3 inset-x-3 bg-amber-500/95 backdrop-blur-sm text-slate-950 text-xs px-3 py-2 rounded-xl shadow-lg border border-amber-600 flex items-center justify-between z-20">
             <div class="flex items-center gap-2">
               <i class="fa-solid fa-clock-rotate-left text-sm"></i>
               <div>
@@ -405,30 +393,19 @@
           </div>
 
           <!-- Relocate Button -->
-          <button onclick="detectLocation()" class="absolute bottom-3 right-3 bg-white/95 text-slate-800 px-2.5 py-1.5 rounded-xl shadow-md border border-slate-200 text-xs flex items-center gap-1.5 font-bold hover:bg-slate-100 z-10 transition">
+          <button onclick="detectLocation()" class="absolute bottom-3 right-3 bg-white/95 text-slate-800 px-3 py-1.5 rounded-xl shadow-md border border-slate-200 text-xs flex items-center gap-1.5 font-bold hover:bg-slate-100 z-20 transition active:scale-95">
             <i class="fa-solid fa-crosshairs text-blue-600"></i> <span data-i18n="map_gps_btn">जीपीएस सेट करें</span>
           </button>
 
-          <!-- Permanent Workshop / Shop Marker -->
-          <div id="map-shop-marker" onclick="setMapFocusMode('shop')" class="absolute top-8 right-6 flex flex-col items-center z-20 cursor-pointer group transition-all duration-300">
-            <div id="shop-map-bubble" class="bg-blue-950 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-blue-400 mb-1 flex items-center gap-1.5 whitespace-nowrap group-hover:scale-105 transition">
-              <i class="fa-solid fa-store text-amber-400 text-[9px]"></i>
-              <span id="shop-bubble-text"><span data-i18n="shop_bubble_title">दुकान</span> • <span id="shop-bubble-dist">2.1</span> KM</span>
-            </div>
-            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xl border-2 border-white text-sm font-bold group-hover:scale-110 group-active:scale-95 transition">
-              <i class="fa-solid fa-shop"></i>
-            </div>
-          </div>
-
-          <!-- Map View Switcher: [ 🛻 वैन ] [ 🏪 दुकान ] -->
+          <!-- Map View Switcher: [ 🏪 दुकान ] [ 📍 मेरी लोकेशन ] -->
           <div class="absolute bottom-3 left-3 z-20 inline-flex bg-white/95 backdrop-blur-sm p-0.5 rounded-xl shadow-md border border-slate-200 text-[11px] font-bold">
-            <button type="button" onclick="setMapFocusMode('van')" id="btn-map-focus-van" class="px-2.5 py-1 rounded-lg transition bg-amber-500 text-slate-950 font-black shadow-xs flex items-center gap-1">
-              <i class="fa-solid fa-truck-pickup text-[10px]"></i>
-              <span data-i18n="map_tab_van">वैन</span>
+            <button type="button" onclick="setMapFocusMode('shop')" id="btn-map-focus-shop" class="px-2.5 py-1 rounded-lg transition bg-blue-600 text-white font-black shadow-xs flex items-center gap-1">
+              <i class="fa-solid fa-shop text-[10px]"></i>
+              <span data-i18n="map_tab_shop">दुकान लोकेशन</span>
             </button>
-            <button type="button" onclick="setMapFocusMode('shop')" id="btn-map-focus-shop" class="px-2.5 py-1 rounded-lg transition text-slate-700 hover:text-slate-950 flex items-center gap-1">
-              <i class="fa-solid fa-shop text-[10px] text-blue-600"></i>
-              <span data-i18n="map_tab_shop">दुकान</span>
+            <button type="button" onclick="setMapFocusMode('van')" id="btn-map-focus-van" class="px-2.5 py-1 rounded-lg transition text-slate-700 hover:text-slate-950 flex items-center gap-1">
+              <i class="fa-solid fa-location-crosshairs text-[10px] text-amber-600"></i>
+              <span id="map-tab-van-label">मेरी लोकेशन</span>
             </button>
           </div>
         </div>
@@ -441,7 +418,7 @@
             </div>
             <div class="truncate">
               <p data-i18n="loc_bar_title" class="text-[11px] font-semibold uppercase text-slate-500">वर्तमान ब्रेकडाउन लोकेशन</p>
-              <h2 id="current-address" class="text-xs font-bold text-slate-800 truncate">सेक्टर 62, सर्विस लेन, दिल्ली-मेरठ एक्सप्रेसवे</h2>
+              <h2 id="current-address" class="text-xs font-bold text-slate-800 truncate">NH-205, नियर बिलासपुर (HP)</h2>
             </div>
           </div>
           <button onclick="changeDistancePrompt()" data-i18n="loc_change_btn" class="text-xs text-blue-600 font-bold shrink-0 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200">
@@ -493,7 +470,7 @@
                   <span id="strip-shop-name">रमेश टायर & पंचर वर्क्स</span>
                   <span data-i18n="shop_strip_badge" class="text-[9px] bg-blue-200 text-blue-900 font-extrabold px-1.5 py-0.2 rounded-full">स्थायी दुकान</span>
                 </p>
-                <p id="strip-shop-address" class="text-[10px] text-blue-700 font-medium truncate">शॉप नंबर 4, NH-48 हाईवे • 2.1 KM</p>
+                <p id="strip-shop-address" class="text-[10px] text-blue-700 font-medium truncate">NH-205 हाईवे, बिलासपुर (HP) • 2.1 KM</p>
               </div>
             </div>
             <div class="shrink-0 flex items-center gap-1 text-[11px] font-black text-blue-600 group-hover:translate-x-0.5 transition">
@@ -531,12 +508,12 @@
                 <i class="fa-solid fa-location-dot text-red-400 text-sm mt-0.5 shrink-0"></i>
                 <div>
                   <p class="text-[10px] text-slate-400 uppercase font-bold" data-i18n="shop_addr_title">दुकान का पूरा पता:</p>
-                  <p id="shop-card-address" class="text-slate-100 font-semibold leading-snug">शॉप नंबर 4, नियर HP पेट्रोल पंप, NH-48 हाईवे, बिलासपुर (HP)</p>
+                  <p id="shop-card-address" class="text-slate-100 font-semibold leading-snug">NH-205 हाईवे, बिलासपुर (HP)</p>
                 </div>
               </div>
               <div class="flex items-center gap-2 pt-1.5 border-t border-slate-800/70 text-[11px]">
                 <i class="fa-solid fa-flag text-amber-400 text-xs shrink-0"></i>
-                <p class="text-slate-300"><span data-i18n="shop_landmark_title">लैंडमार्क:</span> <strong id="shop-card-landmark" class="text-white">HP पेट्रोल पंप के सामने</strong></p>
+                <p class="text-slate-300"><span data-i18n="shop_landmark_title">लैंडमार्क:</span> <strong id="shop-card-landmark" class="text-white">31°19'48.8&quot;N 76°52'23.9&quot;E</strong></p>
               </div>
               <div class="flex items-center gap-2 pt-1.5 border-t border-slate-800/70 text-[11px]">
                 <i class="fa-solid fa-clock text-emerald-400 text-xs shrink-0"></i>
@@ -2574,7 +2551,35 @@
     }
 
     function detectLocation() {
-      showModal('fa-location-crosshairs', 'लोकेशन अपडेट हुई', 'GPS द्वारा आपकी वास्तविक स्थिति डिटेक्ट कर ली गई है। वैन की दूरी 4.5 KM मापी गई है।');
+      if (!navigator.geolocation) {
+        showToast('⚠️ आपके ब्राउज़र में GPS सपोर्ट नहीं है', 'warn');
+        return;
+      }
+      showToast('🛰️ वर्तमान GPS लोकेशन खोजी जा रही है...', 'info');
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          currentLat = pos.coords.latitude;
+          currentLng = pos.coords.longitude;
+          if (typeof updateHomeCustomerMarker === 'function') {
+            updateHomeCustomerMarker(currentLat, currentLng);
+          }
+          if (homeMap) {
+            const shopLat = (currentShopLocation && currentShopLocation.lat) ? currentShopLocation.lat : 31.3302174;
+            const shopLng = (currentShopLocation && currentShopLocation.lng) ? currentShopLocation.lng : 76.8732986;
+            const bounds = L.latLngBounds([[currentLat, currentLng], [shopLat, shopLng]]);
+            homeMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+          }
+          const addrEl = document.getElementById('current-address');
+          if (addrEl) {
+            addrEl.innerText = `GPS: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)} (NH-205 बिलासपुर क्षेत्र)`;
+          }
+          showToast(`📍 GPS मिल गया: दुकान से दूरी ${currentDistanceKm} KM`, 'success');
+        },
+        err => {
+          showToast('⚠️ GPS अनुमति नहीं मिली। डिफ़ॉल्ट लोकेशन इस्तेमाल की जा रही है।', 'warn');
+        },
+        { timeout: 7000, enableHighAccuracy: true }
+      );
     }
 
     // Apply real-time Van Free/Busy state
@@ -2641,14 +2646,24 @@
         .catch(() => {});
     }
 
-    let currentLat = null, currentLng = null;
+    let currentLat = 31.3325, currentLng = 76.8780; // default near NH-205 Bilaspur (HP) shop
     let generatedOrderId = null;
 
     // Try to get real GPS on page load
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => { currentLat = pos.coords.latitude; currentLng = pos.coords.longitude; },
-        ()  => { currentLat = 28.6273; currentLng = 77.3716; } // fallback: Sector 62 Noida
+        pos => {
+          currentLat = pos.coords.latitude;
+          currentLng = pos.coords.longitude;
+          if (typeof updateHomeCustomerMarker === 'function') {
+            updateHomeCustomerMarker(currentLat, currentLng);
+          }
+        },
+        () => {
+          currentLat = 31.3325;
+          currentLng = 76.8780;
+        },
+        { timeout: 5000, enableHighAccuracy: true }
       );
     }
 
@@ -2910,8 +2925,8 @@
       populateConfirmScreen('PW-…'); // placeholder while fetching
 
       // 🚀 Send booking to server IMMEDIATELY (0ms delay) so Admin receives booking in real-time!
-      const bestLat = currentLat || 28.6273;
-      const bestLng = currentLng || 77.3716;
+      const bestLat = currentLat || 31.3325;
+      const bestLng = currentLng || 76.8780;
       sendToServer(bestLat, bestLng);
 
       // Background GPS check (non-blocking)
@@ -2981,10 +2996,17 @@
 
       if (screenId === 'screen-home') {
         navHome.classList.add('text-amber-500', 'font-bold');
+        if (typeof homeMap !== 'undefined' && homeMap) {
+          setTimeout(() => { try { homeMap.invalidateSize(); } catch(e){} }, 120);
+        }
       } else if (screenId === 'screen-store') {
         navStore.classList.add('text-amber-500', 'font-bold');
       } else if (screenId === 'screen-rates') {
         navRates.classList.add('text-amber-500', 'font-bold');
+      } else if (screenId === 'screen-tracking') {
+        if (typeof trackMap !== 'undefined' && trackMap) {
+          setTimeout(() => { try { trackMap.invalidateSize(); } catch(e){} }, 120);
+        }
       }
       // scroll to top on every screen change
       document.getElementById('screen-container').scrollTop = 0;
@@ -3050,14 +3072,20 @@
             if (o.status === 'accepted' && !window.orderAcceptedNotified) {
               window.orderAcceptedNotified = true;
               showModal('fa-circle-check', 'बुकिंग स्वीकार कर ली गई! 👍', 'एडमिन ने आपकी बुकिंग स्वीकार कर ली है। मैकेनिक कुछ ही देर में रवाना होने वाला है।');
+              const activeBanner = document.getElementById('home-active-booking-banner');
+              if (activeBanner) activeBanner.classList.remove('hidden');
+              goToLiveTracking();
             }
             if ((o.status === 'onway' || o.status === 'arrived' || o.status === 'active') && !window.mechanicStartedNotified) {
               window.mechanicStartedNotified = true;
+              const activeBanner = document.getElementById('home-active-booking-banner');
+              if (activeBanner) activeBanner.classList.remove('hidden');
               const banner = document.getElementById('mechanic-onway-banner');
               if (banner) {
                 banner.classList.remove('hidden');
                 banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
+              goToLiveTracking();
             }
             if (o.status === 'arrived' && !window.mechanicArrivedNotified) {
               window.mechanicArrivedNotified = true;
@@ -3071,11 +3099,15 @@
             if (o.status === 'cancelled' && !window.orderCancelledNotified) {
               window.orderCancelledNotified = true;
               clearInterval(window.trackPollInterval);
+              const activeBanner = document.getElementById('home-active-booking-banner');
+              if (activeBanner) activeBanner.classList.add('hidden');
               handleOrderCancelledByAdmin(o.cancelReason);
             }
             if (o.status === 'done' && !window.orderDoneNotified) {
               window.orderDoneNotified = true;
               clearInterval(window.trackPollInterval);
+              const activeBanner = document.getElementById('home-active-booking-banner');
+              if (activeBanner) activeBanner.classList.add('hidden');
               showCompletionCelebrationModal({
                 orderId: o.id,
                 customer: o.customer,
@@ -3096,15 +3128,21 @@
       trackSSE.addEventListener('order-accepted', () => {
         showModal('fa-circle-check', 'बुकिंग स्वीकार कर ली गई! 👍', 'एडमिन ने आपकी बुकिंग स्वीकार कर ली है। मैकेनिक कुछ ही देर में रवाना होने वाला है।');
         if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        const activeBanner = document.getElementById('home-active-booking-banner');
+        if (activeBanner) activeBanner.classList.remove('hidden');
+        goToLiveTracking();
       });
 
       // 2. Mechanic started coming / Ride started → show banner to customer
       trackSSE.addEventListener('mechanic-started', () => {
+        const activeBanner = document.getElementById('home-active-booking-banner');
+        if (activeBanner) activeBanner.classList.remove('hidden');
         const banner = document.getElementById('mechanic-onway-banner');
         if (banner) {
           banner.classList.remove('hidden');
           banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        goToLiveTracking();
         // Vibrate if supported
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       });
@@ -3620,8 +3658,12 @@
       }
     }
 
+    let trackRouteLine   = null;
+
     function initTrackMap(custLat, custLng) {
       if (trackMap) { trackMap.remove(); trackMap = null; }
+      trackRouteLine = null;
+      mechanicTrackPin = null;
       const mapEl = document.getElementById('customer-track-map');
       if (!mapEl) return;
       trackMap = L.map('customer-track-map').setView([custLat, custLng], 14);
@@ -3669,6 +3711,24 @@
         mechanicTrackPin.setLatLng([useLat, useLng]);
         mechanicTrackPin.setPopupContent(popupContent);
         if (isOnSite) mechanicTrackPin.openPopup();
+      }
+
+      // Draw or update route polyline between mechanic and customer
+      if (trackMap) {
+        if (!trackRouteLine) {
+          trackRouteLine = L.polyline([[useLat, useLng], [custLat, custLng]], {
+            color: isOnSite ? '#10b981' : '#f59e0b',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: isOnSite ? null : '8, 8'
+          }).addTo(trackMap);
+        } else {
+          trackRouteLine.setLatLngs([[useLat, useLng], [custLat, custLng]]);
+          trackRouteLine.setStyle({
+            color: isOnSite ? '#10b981' : '#f59e0b',
+            dashArray: isOnSite ? null : '8, 8'
+          });
+        }
       }
 
       const etaEl = document.getElementById('tracking-eta');
@@ -3984,14 +4044,102 @@
     // ── Shop / Permanent Workshop Location (Customer App) ──
     let currentShopLocation = {
       name: 'रमेश टायर & पंचर वर्क्स (मेन वर्कशॉप)',
-      address: 'शॉप नंबर 4, नियर HP पेट्रोल पंप, NH-48 हाईवे, बिलासपुर (HP)',
-      landmark: 'HP पेट्रोल पंप के सामने, NH-48',
+      address: 'NH-205 हाईवे, बिलासपुर (HP)',
+      landmark: '31°19\'48.8"N 76°52\'23.9"E',
       phone: '9876543210',
       timings: '24×7 खुला है (Always Open)',
-      lat: 31.3985,
-      lng: 76.8240,
+      lat: 31.3302174,
+      lng: 76.8732986,
       distanceKm: 2.1
     };
+
+    let homeMap = null;
+    let homeShopMarker = null;
+    let homeCustMarker = null;
+
+    function initHomeMap() {
+      const mapEl = document.getElementById('home-customer-map');
+      if (!mapEl) return;
+      if (homeMap) {
+        try { homeMap.invalidateSize(); } catch(e){}
+        return;
+      }
+
+      const shopLat = (currentShopLocation && currentShopLocation.lat) ? currentShopLocation.lat : 31.3302174;
+      const shopLng = (currentShopLocation && currentShopLocation.lng) ? currentShopLocation.lng : 76.8732986;
+
+      homeMap = L.map('home-customer-map', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView([shopLat, shopLng], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(homeMap);
+
+      // Workshop marker (blue shop icon)
+      const shopIcon = L.divIcon({
+        html: `<div style="background:#1e40af;color:#fff;border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,0.4);cursor:pointer;" title="मुख्य दुकान">🏪</div>`,
+        className: '',
+        iconAnchor: [20, 20]
+      });
+
+      homeShopMarker = L.marker([shopLat, shopLng], { icon: shopIcon })
+        .addTo(homeMap)
+        .bindPopup(`
+          <div style="font-family:sans-serif;min-width:180px;">
+            <p style="font-weight:900;color:#0f172a;font-size:13px;margin:0 0 2px 0;">🏪 ${currentShopLocation.name || 'रमेश टायर & पंचर वर्क्स'}</p>
+            <p style="font-size:11px;color:#475569;margin:0 0 4px 0;">${currentShopLocation.address || 'NH-205 हाईवे, बिलासपुर (HP)'}</p>
+            <p style="font-size:10px;font-weight:bold;color:#059669;margin:0 0 6px 0;">🟢 24×7 वर्कशॉप खुली है</p>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${shopLat},${shopLng}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:bold;text-decoration:none;">🧭 दिशा-निर्देश (Google Maps)</a>
+          </div>
+        `);
+
+      // Open shop popup for new customer
+      setTimeout(() => {
+        if (homeShopMarker && !currentOrderId) {
+          homeShopMarker.openPopup();
+        }
+      }, 400);
+
+      if (currentLat && currentLng) {
+        updateHomeCustomerMarker(currentLat, currentLng);
+      }
+    }
+
+    function updateHomeShopMarker() {
+      const shopLat = (currentShopLocation && currentShopLocation.lat) ? currentShopLocation.lat : 31.3302174;
+      const shopLng = (currentShopLocation && currentShopLocation.lng) ? currentShopLocation.lng : 76.8732986;
+      if (homeShopMarker) {
+        homeShopMarker.setLatLng([shopLat, shopLng]);
+      }
+    }
+
+    function updateHomeCustomerMarker(lat, lng) {
+      if (!homeMap) return;
+      const custIcon = L.divIcon({
+        html: `<div style="background:#2563eb;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);">📍</div>`,
+        className: '',
+        iconAnchor: [17, 34]
+      });
+
+      if (homeCustMarker) {
+        homeCustMarker.setLatLng([lat, lng]);
+      } else {
+        homeCustMarker = L.marker([lat, lng], { icon: custIcon })
+          .addTo(homeMap)
+          .bindPopup('<b>आपकी वर्तमान लोकेशन</b>');
+      }
+
+      // Calculate distance to shop
+      const shopLat = (currentShopLocation && currentShopLocation.lat) ? currentShopLocation.lat : 31.3302174;
+      const shopLng = (currentShopLocation && currentShopLocation.lng) ? currentShopLocation.lng : 76.8732986;
+      const dist = getDistanceKm(lat, lng, shopLat, shopLng);
+      currentDistanceKm = Math.max(0.5, parseFloat(dist.toFixed(1)));
+      currentShopLocation.distanceKm = currentDistanceKm;
+      applyShopLocationUI(currentShopLocation);
+      recalculateFare();
+    }
 
     function loadShopLocation() {
       fetch(`${SERVER}/api/shop-location`)
@@ -4000,6 +4148,7 @@
           if (data && data.name) {
             currentShopLocation = { ...currentShopLocation, ...data };
             applyShopLocationUI(currentShopLocation);
+            updateHomeShopMarker();
           }
         })
         .catch(() => {});
@@ -4018,7 +4167,7 @@
       const stripAddr = document.getElementById('strip-shop-address');
       if (stripName) stripName.innerText = data.name || 'रमेश टायर & पंचर वर्क्स';
       if (stripAddr) {
-        const shortAddr = data.address ? data.address.split(',')[0] : 'NH-48 हाईवे';
+        const shortAddr = data.address ? data.address.split(',')[0] : 'NH-205 हाईवे';
         stripAddr.innerText = `${shortAddr} • ${distStr} KM`;
       }
 
@@ -4038,13 +4187,11 @@
       if (callBtn && data.phone) callBtn.href = `tel:${data.phone}`;
     }
 
-    let mapFocusMode = 'van'; // 'van' | 'shop'
+    let mapFocusMode = 'shop'; // 'shop' | 'van'
     function setMapFocusMode(mode) {
       mapFocusMode = mode;
       const btnVan = document.getElementById('btn-map-focus-van');
       const btnShop = document.getElementById('btn-map-focus-shop');
-      const vanMarker = document.getElementById('map-van-marker');
-      const shopMarker = document.getElementById('map-shop-marker');
 
       if (mode === 'shop') {
         if (btnVan) {
@@ -4053,13 +4200,11 @@
         if (btnShop) {
           btnShop.className = 'px-2.5 py-1 rounded-lg transition bg-blue-600 text-white font-black shadow-xs flex items-center gap-1';
         }
-        if (shopMarker) {
-          shopMarker.classList.add('scale-125');
-        }
-        if (vanMarker) {
-          vanMarker.style.opacity = '0.6';
-        }
         toggleShopDetailsCard(true);
+        if (homeMap && currentShopLocation && currentShopLocation.lat) {
+          homeMap.flyTo([currentShopLocation.lat, currentShopLocation.lng], 15, { duration: 0.8 });
+          if (homeShopMarker) homeShopMarker.openPopup();
+        }
       } else {
         if (btnVan) {
           btnVan.className = 'px-2.5 py-1 rounded-lg transition bg-amber-500 text-slate-950 font-black shadow-xs flex items-center gap-1';
@@ -4067,11 +4212,10 @@
         if (btnShop) {
           btnShop.className = 'px-2.5 py-1 rounded-lg transition text-slate-700 hover:text-slate-950 flex items-center gap-1';
         }
-        if (shopMarker) {
-          shopMarker.classList.remove('scale-125');
-        }
-        if (vanMarker) {
-          vanMarker.style.opacity = '1';
+        toggleShopDetailsCard(false);
+        if (homeMap && currentLat && currentLng) {
+          homeMap.flyTo([currentLat, currentLng], 15, { duration: 0.8 });
+          if (homeCustMarker) homeCustMarker.openPopup();
         }
       }
     }
@@ -4176,6 +4320,7 @@
             const shop = JSON.parse(e.data);
             currentShopLocation = { ...currentShopLocation, ...shop };
             applyShopLocationUI(currentShopLocation);
+            updateHomeShopMarker();
           } catch(err){}
         });
 
@@ -4198,6 +4343,7 @@
     loadShopLocation();
     setInterval(loadShopLocation, 6000);
     connectCustomerLiveSSE();
+    setTimeout(initHomeMap, 150);
   </script>
 </body>
 </html>
