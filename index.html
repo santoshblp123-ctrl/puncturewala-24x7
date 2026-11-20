@@ -2098,6 +2098,7 @@
           if (currentUser && currentUser.name) {
             showApp(currentUser);
             hideLoginScreen();
+            syncUserLoginToServer(currentUser);
             if (firebaseAuth) {
               firebaseAuth.onAuthStateChanged(u => {
                 if (u) handleAuthUser(u);
@@ -2174,6 +2175,27 @@
     }
 
 
+    // ── Sync user login to backend database ─────────
+    function syncUserLoginToServer(user) {
+      if (!user) return;
+      try {
+        const payload = {
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          photoURL: user.picture || '',
+          provider: user.provider || (user.email ? 'google' : 'phone'),
+          uid: user.uid || '',
+          device: /android/i.test(navigator.userAgent) ? 'Android App' : 'Mobile Web'
+        };
+        fetch(`${SERVER}/api/user-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      } catch(e) {}
+    }
+
     // ── Core login function ────────────────────────
     function loginUser(user) {
       if (!user) return;
@@ -2188,6 +2210,9 @@
 
       // CRITICAL: Hide login screen immediately!
       hideLoginScreen();
+
+      // Register/sync user login to server
+      syncUserLoginToServer(user);
 
       showApp(user);
     }
