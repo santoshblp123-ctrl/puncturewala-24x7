@@ -2884,18 +2884,21 @@
       navigateTo('screen-confirm');
       populateConfirmScreen('PW-…'); // placeholder while fetching
 
-      // Get FRESH GPS at booking time (not cached)
-      const FALLBACK_LAT = currentLat || 28.6273;
-      const FALLBACK_LNG = currentLng || 77.3716;
+      // 🚀 Send booking to server IMMEDIATELY (0ms delay) so Admin receives booking in real-time!
+      const bestLat = currentLat || 28.6273;
+      const bestLng = currentLng || 77.3716;
+      sendToServer(bestLat, bestLng);
 
+      // Background GPS check (non-blocking)
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          pos => sendToServer(pos.coords.latitude, pos.coords.longitude),
-          ()  => sendToServer(FALLBACK_LAT, FALLBACK_LNG),
-          { timeout: 8000, maximumAge: 0, enableHighAccuracy: true }
+          pos => {
+            currentLat = pos.coords.latitude;
+            currentLng = pos.coords.longitude;
+          },
+          () => {},
+          { timeout: 4000, maximumAge: 30000, enableHighAccuracy: false }
         );
-      } else {
-        sendToServer(FALLBACK_LAT, FALLBACK_LNG);
       }
     }
 
@@ -2998,7 +3001,7 @@
         trackSSE = new EventSource(`${SERVER}/api/track/${orderId}`);
       } catch(e) {}
 
-      // Smart Fallback Polling every 3s (guarantees real-time updates even if SSE is buffered)
+      // Smart Fallback Polling every 1.5s (guarantees real-time updates even if SSE is buffered)
       if (window.trackPollInterval) clearInterval(window.trackPollInterval);
       window.orderAcceptedNotified = false;
       window.mechanicStartedNotified = false;
@@ -3062,7 +3065,7 @@
             }
           })
           .catch(() => {});
-      }, 3000);
+      }, 1500);
 
       // 1. Order accepted by Admin
       trackSSE.addEventListener('order-accepted', () => {
