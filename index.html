@@ -243,6 +243,12 @@
             </svg>
             <span data-i18n="login_google_btn">Google से साइन इन करें</span>
           </button>
+
+          <!-- 📲 Phone / Quick Mobile Login Button -->
+          <button type="button" onclick="openQuickPhoneLoginModal()" class="w-full bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 text-amber-400 font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2.5 transition shadow-md hover:border-amber-500/50">
+            <i class="fa-solid fa-mobile-screen-button text-amber-400"></i>
+            <span>मोबाइल नंबर से लॉगिन करें</span>
+          </button>
         </div>
       </div>
 
@@ -1202,6 +1208,36 @@
       </button>
     </nav>
 
+    <!-- 📲 Quick Phone Login Modal -->
+    <div id="quick-phone-login-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl space-y-4">
+        <div class="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-xl mx-auto border border-amber-500/30">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">मोबाइल नंबर से लॉगिन</h3>
+          <p class="text-xs text-slate-400 mt-1">अपना नाम और 10-अंकों का नंबर दर्ज करें</p>
+        </div>
+        <div class="space-y-3 text-left">
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 block mb-1">आपका नाम</label>
+            <input type="text" id="quick-cust-name" placeholder="उदा. राहुल शर्मा" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 block mb-1">10-अंकों का मोबाइल नंबर</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-2.5 text-sm text-slate-400 font-semibold">+91</span>
+              <input type="tel" id="quick-cust-phone" maxlength="10" placeholder="9876543210" class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2.5 pt-2">
+          <button type="button" onclick="closeQuickPhoneLoginModal()" class="flex-1 bg-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-xs hover:bg-slate-700 transition">रद्द करें</button>
+          <button type="button" onclick="submitQuickPhoneLogin()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg transition">लॉगिन करें ➔</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom Modal for Alerts / Simulator -->
     <div id="generic-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl text-center space-y-3">
@@ -1890,6 +1926,22 @@
     let isFirebaseInit = false;
     let currentUser = null;
 
+    function handleAuthUser(u) {
+      if (!u) return;
+      const user = {
+        name:     u.displayName || (u.email ? u.email.split('@')[0] : 'ग्राहक'),
+        email:    u.email || '',
+        phone:    u.phoneNumber || '',
+        picture:  u.photoURL || null,
+        initials: (u.displayName || u.email || 'ग्राहक').slice(0, 2).toUpperCase(),
+        color:    '#4285f4',
+        provider: 'google',
+        uid:      u.uid
+      };
+      loginUser(user);
+      showToast(`✅ Google से सफलतापूर्वक साइन इन हुआ: ${user.name}`);
+    }
+
     function initFirebase() {
       if (typeof firebase !== 'undefined' && !isFirebaseInit) {
         try {
@@ -1897,6 +1949,9 @@
             firebase.initializeApp(firebaseConfig);
           }
           firebaseAuth = firebase.auth();
+          try {
+            firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+          } catch(pe) {}
           isFirebaseInit = true;
           console.log('Firebase Auth initialized!');
         } catch (e) {
@@ -1916,47 +1971,48 @@
       if (loginBtn) {
         loginBtn.innerHTML = `
           <div class="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin"></div>
-          <span class="font-bold text-slate-800">Google खाता खुल रहा है...</span>
+          <span class="font-bold text-slate-800">Google से जुड़ रहे हैं...</span>
         `;
       }
 
       try {
         initFirebase();
-
-        if (!firebaseAuth) {
-          throw new Error('Firebase Auth unavailable');
-        }
+        if (!firebaseAuth) throw new Error('Firebase Auth unavailable');
 
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
 
-        const result = await firebaseAuth.signInWithPopup(provider);
-        const u = result.user;
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        if (u && u.email) {
-          const user = {
-            name:     u.displayName || u.email.split('@')[0],
-            email:    u.email,
-            picture:  u.photoURL || null,
-            initials: (u.displayName || u.email).slice(0, 2).toUpperCase(),
-            color:    '#4285f4',
-            provider: 'google',
-            uid:      u.uid
-          };
-
-          loginUser(user);
-          showToast(`✅ Google से सफलतापूर्वक साइन इन हुआ: ${user.name}`);
-          return;
+        if (isMobile) {
+          try {
+            const result = await firebaseAuth.signInWithPopup(provider);
+            if (result && result.user) {
+              handleAuthUser(result.user);
+              return;
+            }
+          } catch (popupErr) {
+            console.warn('Mobile popup fallback to redirect:', popupErr.code);
+            if (popupErr.code === 'auth/unauthorized-domain') throw popupErr;
+            localStorage.setItem('pw_auth_redirecting', 'true');
+            await firebaseAuth.signInWithRedirect(provider);
+            return;
+          }
+        } else {
+          const result = await firebaseAuth.signInWithPopup(provider);
+          if (result && result.user) {
+            handleAuthUser(result.user);
+            return;
+          }
         }
       } catch (err) {
         console.error('Google Sign-In Error:', err);
-        if (err.code === 'auth/popup-closed-by-user') {
-          showToast('⚠️ लॉगिन विंडो बंद कर दी गई', 'error');
-        } else if (err.code === 'auth/unauthorized-domain') {
+        if (err.code === 'auth/unauthorized-domain') {
           showToast('⚠️ Firebase Console में puncherwala.in डोमेन को Authorized Domains में जोड़ें', 'error');
-        } else if (err.code === 'auth/popup-blocked') {
-          showToast('⚠️ ब्राउज़र ने पॉपअप ब्लॉक किया, रीडायरेक्ट किया जा रहा है...', 'info');
+        } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+          showToast('⚠️ Google लॉगिन रीडायरेक्ट किया जा रहा है...', 'info');
           try {
+            localStorage.setItem('pw_auth_redirecting', 'true');
             const provider = new firebase.auth.GoogleAuthProvider();
             await firebaseAuth.signInWithRedirect(provider);
             return;
@@ -1970,38 +2026,107 @@
       }
     }
 
-    // Check if already logged in (from localStorage or Firebase Redirect)
+    // Check if already logged in (from localStorage, Firebase session, or redirect)
     function initAuth() {
       initFirebase();
 
-      if (firebaseAuth) {
-        firebaseAuth.getRedirectResult().then(result => {
-          if (result && result.user) {
-            const u = result.user;
-            const user = {
-              name:     u.displayName || u.email.split('@')[0],
-              email:    u.email,
-              picture:  u.photoURL || null,
-              initials: (u.displayName || u.email).slice(0, 2).toUpperCase(),
-              color:    '#4285f4',
-              provider: 'google',
-              uid:      u.uid
-            };
-            loginUser(user);
-            showToast(`✅ Google से सफलतापूर्वक साइन इन हुआ: ${user.name}`);
-            return;
-          }
-        }).catch(err => console.error('Redirect result error:', err));
-      }
-
+      // Check saved user
       const saved = localStorage.getItem('pw_user');
       if (saved) {
-        currentUser = JSON.parse(saved);
-        showApp(currentUser);
+        try {
+          currentUser = JSON.parse(saved);
+          showApp(currentUser);
+          if (firebaseAuth) {
+            firebaseAuth.onAuthStateChanged(u => {
+              if (u) handleAuthUser(u);
+            });
+          }
+          return;
+        } catch(e){}
+      }
+
+      // Check if returning from redirect
+      const wasRedirecting = localStorage.getItem('pw_auth_redirecting');
+      if (wasRedirecting) {
+        const loginEl = document.getElementById('login-screen');
+        if (loginEl) {
+          loginEl.classList.remove('hidden');
+          const btn = loginEl.querySelector('.google-btn');
+          if (btn) {
+            btn.innerHTML = `
+              <div class="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin"></div>
+              <span class="font-bold text-slate-800">लॉगिन सत्यापित हो रहा है...</span>
+            `;
+          }
+        }
+      }
+
+      if (firebaseAuth) {
+        // 1. Official Firebase Auth Observer (Crucial for Mobile & Redirects)
+        firebaseAuth.onAuthStateChanged(u => {
+          localStorage.removeItem('pw_auth_redirecting');
+          if (u) {
+            handleAuthUser(u);
+          } else if (!currentUser) {
+            const loginEl = document.getElementById('login-screen');
+            if (loginEl) loginEl.classList.remove('hidden');
+          }
+        });
+
+        // 2. Also check redirect result
+        firebaseAuth.getRedirectResult().then(result => {
+          localStorage.removeItem('pw_auth_redirecting');
+          if (result && result.user) {
+            handleAuthUser(result.user);
+          }
+        }).catch(err => {
+          localStorage.removeItem('pw_auth_redirecting');
+          console.error('Redirect result error:', err);
+        });
       } else {
         const loginEl = document.getElementById('login-screen');
         if (loginEl) loginEl.classList.remove('hidden');
       }
+    }
+
+    // ── Quick Phone Login Handlers ─────────────────
+    function openQuickPhoneLoginModal() {
+      const modal = document.getElementById('quick-phone-login-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => document.getElementById('quick-cust-name')?.focus(), 100);
+      }
+    }
+
+    function closeQuickPhoneLoginModal() {
+      const modal = document.getElementById('quick-phone-login-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function submitQuickPhoneLogin() {
+      const name = (document.getElementById('quick-cust-name')?.value || '').trim() || 'ग्राहक';
+      const phoneInput = (document.getElementById('quick-cust-phone')?.value || '').trim();
+      if (!phoneInput || phoneInput.length < 10) {
+        showToast('⚠️ कृपया सही 10-अंकों का मोबाइल नंबर दर्ज करें', 'error');
+        return;
+      }
+      const user = {
+        name:     name,
+        email:    '',
+        phone:    `+91 ${phoneInput}`,
+        picture:  null,
+        initials: name.slice(0, 2).toUpperCase(),
+        color:    '#f59e0b',
+        provider: 'phone',
+        uid:      'phone_' + Date.now()
+      };
+      closeQuickPhoneLoginModal();
+      loginUser(user);
+      showToast(`✅ सफलतापूर्वक लॉगिन हुआ: ${user.name}`);
     }
 
     // ── Guest Login ────────────────────────────────
