@@ -1238,6 +1238,42 @@
       </div>
     </div>
 
+    <!-- ⚠️ Firebase Unauthorized Domain Help Modal -->
+    <div id="domain-auth-help-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 items-center justify-center p-4">
+      <div class="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl space-y-4">
+        <div class="w-14 h-14 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-2xl mx-auto border border-amber-500/40 shadow-lg">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Google लॉगिन डोमेन सुरक्षा</h3>
+          <p class="text-xs text-amber-300 font-semibold mt-1">Firebase Console में puncherwala.in अधिकृत करें</p>
+        </div>
+        <div class="bg-slate-800/80 rounded-2xl p-3.5 text-left text-xs text-slate-300 space-y-2 border border-slate-700/60">
+          <div class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+            <span>नीचे दिए गए बटन से Firebase Console खोलें।</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+            <span><strong>Authorized domains</strong> में <strong class="text-amber-400 font-mono">puncherwala.in</strong> जोड़ें।</span>
+          </div>
+        </div>
+        <div class="space-y-2 pt-1">
+          <a href="https://console.firebase.google.com/project/punchar-wala/authentication/settings" target="_blank" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Firebase Console खोलें (1-क्लिक)</span>
+          </a>
+          <button type="button" onclick="closeDomainAuthHelpModal(); openQuickPhoneLoginModal();" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-mobile-screen-button text-amber-400"></i>
+            <span>या मोबाइल नंबर से तुरंत लॉगिन करें</span>
+          </button>
+          <button type="button" onclick="closeDomainAuthHelpModal()" class="w-full text-slate-500 hover:text-slate-400 text-[11px] font-medium py-1">
+            बंद करें
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom Modal for Alerts / Simulator -->
     <div id="generic-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl text-center space-y-3">
@@ -1645,8 +1681,7 @@
         login_feat_2: '24x7 उपलब्ध',
         login_feat_3: 'पारदर्शी रेट',
         login_google_btn: 'Google से साइन इन करें',
-        login_or: 'या',
-        login_guest_btn: 'गेस्ट के रूप में जारी रखें',
+        login_phone_btn: 'मोबाइल नंबर से लॉगिन करें',
         login_terms: 'साइन इन करके आप हमारी सेवा शर्तें और गोपनीयता नीति से सहमत हैं'
       },
       en: {
@@ -1817,8 +1852,7 @@
         login_feat_2: '24x7 Available',
         login_feat_3: 'Transparent Rates',
         login_google_btn: 'Sign in with Google',
-        login_or: 'OR',
-        login_guest_btn: 'Continue as Guest',
+        login_phone_btn: 'Login with Mobile Number',
         login_terms: 'By signing in, you agree to our Terms of Service and Privacy Policy'
       }
     };
@@ -1995,12 +2029,19 @@
         })
         .catch(err => {
           console.error('Google Sign-In Popup Error:', err);
-          if (err.code === 'auth/unauthorized-domain') {
-            showToast('⚠️ Firebase Console में puncherwala.in डोमेन को Authorized Domains में जोड़ें', 'error');
-          } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-            showToast('⚠️ पॉपअप बंद कर दिया गया', 'info');
-          } else if (err.code === 'auth/popup-blocked') {
+          const errCode = (err.code || '').toLowerCase();
+          const errMsg = (err.message || '').toLowerCase();
+
+          // Check if domain is not authorized in Firebase Console
+          if (errCode.includes('unauthorized-domain') || errMsg.includes('unauthorized-domain') || errMsg.includes('authorized domain')) {
+            openDomainAuthHelpModal();
+            return;
+          } else if (errCode === 'auth/popup-closed-by-user' || errCode === 'auth/cancelled-popup-request') {
+            showToast('ℹ️ Google लॉगिन रद्द किया गया', 'info');
+            return;
+          } else if (errCode === 'auth/popup-blocked') {
             showToast('⚠️ ब्राउज़र ने पॉपअप ब्लॉक किया। पॉपअप Allow करें।', 'error');
+            return;
           } else {
             showToast(`⚠️ Google लॉगिन: ${err.message || 'त्रुटि'}`, 'error');
           }
@@ -2011,40 +2052,64 @@
         });
     }
 
+    // ── Domain Authorization Help Modal ────────────
+    function openDomainAuthHelpModal() {
+      const modal = document.getElementById('domain-auth-help-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function closeDomainAuthHelpModal() {
+      const modal = document.getElementById('domain-auth-help-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function hideLoginScreen() {
+      const loginScreen = document.getElementById('login-screen');
+      if (loginScreen) {
+        loginScreen.style.display = 'none';
+        loginScreen.classList.add('hidden');
+      }
+    }
+
+    function showLoginScreen() {
+      const loginScreen = document.getElementById('login-screen');
+      if (loginScreen) {
+        loginScreen.style.display = 'flex';
+        loginScreen.style.opacity = '1';
+        loginScreen.classList.remove('hidden');
+      }
+    }
+
     // Check if already logged in (from localStorage, Firebase session, or redirect)
     function initAuth() {
       initFirebase();
 
-      // Check saved user
-      const saved = localStorage.getItem('pw_user');
-      if (saved) {
-        try {
+      // Check saved user in localStorage first
+      try {
+        const saved = localStorage.getItem('pw_user');
+        if (saved) {
           currentUser = JSON.parse(saved);
-          showApp(currentUser);
-          if (firebaseAuth) {
-            firebaseAuth.onAuthStateChanged(u => {
-              if (u) handleAuthUser(u);
-            });
-          }
-          return;
-        } catch(e){}
-      }
-
-      // Check if returning from redirect
-      const wasRedirecting = localStorage.getItem('pw_auth_redirecting');
-      if (wasRedirecting) {
-        const loginEl = document.getElementById('login-screen');
-        if (loginEl) {
-          loginEl.classList.remove('hidden');
-          const btn = loginEl.querySelector('.google-btn');
-          if (btn) {
-            btn.innerHTML = `
-              <div class="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin"></div>
-              <span class="font-bold text-slate-800">लॉगिन सत्यापित हो रहा है...</span>
-            `;
+          if (currentUser && currentUser.name) {
+            showApp(currentUser);
+            hideLoginScreen();
+            if (firebaseAuth) {
+              firebaseAuth.onAuthStateChanged(u => {
+                if (u) handleAuthUser(u);
+              });
+            }
+            return;
           }
         }
-      }
+      } catch(e){}
+
+      // If no saved user, show login screen
+      showLoginScreen();
 
       if (firebaseAuth) {
         // 1. Official Firebase Auth Observer (Crucial for Mobile & Redirects)
@@ -2052,9 +2117,6 @@
           localStorage.removeItem('pw_auth_redirecting');
           if (u) {
             handleAuthUser(u);
-          } else if (!currentUser) {
-            const loginEl = document.getElementById('login-screen');
-            if (loginEl) loginEl.classList.remove('hidden');
           }
         });
 
@@ -2068,9 +2130,6 @@
           localStorage.removeItem('pw_auth_redirecting');
           console.error('Redirect result error:', err);
         });
-      } else {
-        const loginEl = document.getElementById('login-screen');
-        if (loginEl) loginEl.classList.remove('hidden');
       }
     }
 
@@ -2114,40 +2173,40 @@
       showToast(`✅ सफलतापूर्वक लॉगिन हुआ: ${user.name}`);
     }
 
-    // ── Guest Login ────────────────────────────────
-    function guestLogin() {
-      const user = {
-        name:     'गेस्ट यूज़र',
-        email:    'guest@puncturewala.in',
-        initials: 'G',
-        picture:  null,
-        color:    '#64748b',
-        provider: 'guest'
-      };
-      loginUser(user);
-    }
 
     // ── Core login function ────────────────────────
     function loginUser(user) {
-      currentUser = user;
-      localStorage.setItem('pw_user', JSON.stringify(user));
+      if (!user) return;
+      const userName = user.name || (user.email ? user.email.split('@')[0] : 'ग्राहक');
+      user.name = userName;
+      user.initials = user.initials || userName.slice(0, 2).toUpperCase();
 
-      // Hide login screen with fade
-      const loginScreen = document.getElementById('login-screen');
-      loginScreen.style.transition = 'opacity 0.4s ease';
-      loginScreen.style.opacity = '0';
-      setTimeout(() => loginScreen.classList.add('hidden'), 400);
+      currentUser = user;
+      try {
+        localStorage.setItem('pw_user', JSON.stringify(user));
+      } catch(e) {}
+
+      // CRITICAL: Hide login screen immediately!
+      hideLoginScreen();
 
       showApp(user);
     }
 
     // ── Update header & app with user info ─────────
     function showApp(user) {
+      if (!user) return;
+
+      // CRITICAL: ALWAYS HIDE LOGIN SCREEN WHEN SHOWING APP!
+      hideLoginScreen();
+
+      const userName = (user.name || 'ग्राहक');
+      const firstName = userName.split(' ')[0] || userName;
+
       // Header greeting
       const greeting = document.getElementById('header-user-greeting');
       if (greeting) {
-        const hello = currentLang === 'en' ? 'Hello' : 'नमस्ते';
-        greeting.textContent = `${hello}, ${user.name.split(' ')[0]}! 👋`;
+        const hello = (typeof currentLang !== 'undefined' && currentLang === 'en') ? 'Hello' : 'नमस्ते';
+        greeting.textContent = `${hello}, ${firstName}! 👋`;
       }
 
       // Avatar in header
@@ -2156,23 +2215,23 @@
       if (avatarWrap && avatarCircle) {
         avatarWrap.classList.remove('hidden');
         if (user.picture) {
-          avatarCircle.innerHTML = `<img src="${user.picture}" class="w-full h-full rounded-full object-cover" onerror="this.parentElement.textContent='${user.initials}'">`;
+          avatarCircle.innerHTML = `<img src="${user.picture}" class="w-full h-full rounded-full object-cover" onerror="this.parentElement.textContent='${user.initials || 'PW'}'">`;
         } else {
-          avatarCircle.textContent = user.initials;
+          avatarCircle.textContent = user.initials || 'PW';
         }
-        avatarCircle.style.background = user.color;
+        avatarCircle.style.background = user.color || '#f59e0b';
       }
 
       // Menu
       const menuAvatar = document.getElementById('menu-avatar');
       if (menuAvatar) {
-        menuAvatar.textContent = user.initials;
-        menuAvatar.style.background = user.color;
+        menuAvatar.textContent = user.initials || 'PW';
+        menuAvatar.style.background = user.color || '#f59e0b';
       }
       const menuName = document.getElementById('menu-name');
-      if (menuName) menuName.textContent = user.name;
+      if (menuName) menuName.textContent = userName;
       const menuEmail = document.getElementById('menu-email');
-      if (menuEmail) menuEmail.textContent = user.email;
+      if (menuEmail) menuEmail.textContent = user.email || user.phone || '';
     }
 
     // ── User menu toggle ───────────────────────────
