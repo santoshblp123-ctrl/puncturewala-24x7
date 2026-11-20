@@ -1961,7 +1961,7 @@
     }
 
     let isGoogleLoggingIn = false;
-    async function startGoogleLogin() {
+    function startGoogleLogin() {
       if (isGoogleLoggingIn) return;
       isGoogleLoggingIn = true;
 
@@ -1971,59 +1971,44 @@
       if (loginBtn) {
         loginBtn.innerHTML = `
           <div class="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin"></div>
-          <span class="font-bold text-slate-800">Google से जुड़ रहे हैं...</span>
+          <span class="font-bold text-slate-800">Google खाता खुल रहा है...</span>
         `;
       }
 
-      try {
-        initFirebase();
-        if (!firebaseAuth) throw new Error('Firebase Auth unavailable');
-
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-        if (isMobile) {
-          try {
-            const result = await firebaseAuth.signInWithPopup(provider);
-            if (result && result.user) {
-              handleAuthUser(result.user);
-              return;
-            }
-          } catch (popupErr) {
-            console.warn('Mobile popup fallback to redirect:', popupErr.code);
-            if (popupErr.code === 'auth/unauthorized-domain') throw popupErr;
-            localStorage.setItem('pw_auth_redirecting', 'true');
-            await firebaseAuth.signInWithRedirect(provider);
-            return;
-          }
-        } else {
-          const result = await firebaseAuth.signInWithPopup(provider);
-          if (result && result.user) {
-            handleAuthUser(result.user);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error('Google Sign-In Error:', err);
-        if (err.code === 'auth/unauthorized-domain') {
-          showToast('⚠️ Firebase Console में puncherwala.in डोमेन को Authorized Domains में जोड़ें', 'error');
-        } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-          showToast('⚠️ Google लॉगिन रीडायरेक्ट किया जा रहा है...', 'info');
-          try {
-            localStorage.setItem('pw_auth_redirecting', 'true');
-            const provider = new firebase.auth.GoogleAuthProvider();
-            await firebaseAuth.signInWithRedirect(provider);
-            return;
-          } catch(e){}
-        } else {
-          showToast(`⚠️ Google लॉगिन: ${err.message || 'त्रुटि'}`, 'error');
-        }
-      } finally {
+      initFirebase();
+      if (!firebaseAuth) {
         isGoogleLoggingIn = false;
         if (loginBtn) loginBtn.innerHTML = originalHtml;
+        showToast('⚠️ Firebase Auth उपलब्ध नहीं है', 'error');
+        return;
       }
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      // Always open Google Account Chooser in a small popup window
+      firebaseAuth.signInWithPopup(provider)
+        .then(result => {
+          if (result && result.user) {
+            handleAuthUser(result.user);
+          }
+        })
+        .catch(err => {
+          console.error('Google Sign-In Popup Error:', err);
+          if (err.code === 'auth/unauthorized-domain') {
+            showToast('⚠️ Firebase Console में puncherwala.in डोमेन को Authorized Domains में जोड़ें', 'error');
+          } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+            showToast('⚠️ पॉपअप बंद कर दिया गया', 'info');
+          } else if (err.code === 'auth/popup-blocked') {
+            showToast('⚠️ ब्राउज़र ने पॉपअप ब्लॉक किया। पॉपअप Allow करें।', 'error');
+          } else {
+            showToast(`⚠️ Google लॉगिन: ${err.message || 'त्रुटि'}`, 'error');
+          }
+        })
+        .finally(() => {
+          isGoogleLoggingIn = false;
+          if (loginBtn) loginBtn.innerHTML = originalHtml;
+        });
     }
 
     // Check if already logged in (from localStorage, Firebase session, or redirect)
