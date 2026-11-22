@@ -275,6 +275,51 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <!-- 🔔 Customer Notification Bell Button with Badge Counter -->
+        <div class="relative">
+          <button id="cust-notif-bell-btn" type="button" onclick="toggleCustNotifDrawer()" title="सूचनाएं (Notifications)"
+            class="relative w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition shadow-xs active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-bell text-xs"></i>
+            <!-- Unread Badge Ping & Counter -->
+            <span id="cust-notif-badge-ping" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping"></span>
+            <span id="cust-notif-badge" class="hidden absolute -top-1 -right-1 min-w-[17px] h-[17px] bg-amber-500 text-slate-950 text-[9px] font-black rounded-full px-1 flex items-center justify-center shadow-md border border-slate-900">0</span>
+          </button>
+
+          <!-- 🔔 Customer Floating Notification Drawer / Popover -->
+          <div id="cust-notif-drawer" class="hidden fixed sm:absolute right-3 sm:right-0 top-16 sm:top-12 w-[calc(100vw-24px)] sm:w-[360px] bg-white rounded-3xl shadow-2xl border border-slate-200 z-[100] overflow-hidden animate-fade-in text-slate-900">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-black shrink-0">
+                  <i class="fa-solid fa-bell"></i>
+                </div>
+                <div class="truncate">
+                  <h3 class="font-black text-xs flex items-center gap-1.5 leading-tight truncate">
+                    <span>सूचनाएं (Notifications)</span>
+                    <span id="cust-notif-unread-pill" class="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.2 rounded-full shrink-0">0 नया</span>
+                  </h3>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="markAllCustNotificationsAsRead()" title="सभी पढ़ें" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold px-2 py-1 rounded-lg transition border border-slate-700 cursor-pointer">
+                  सभी पढ़ें
+                </button>
+                <button type="button" onclick="clearAllCustNotifications()" title="साफ़ करें" class="text-[10px] bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-300 font-bold px-2 py-1 rounded-lg transition border border-slate-700 cursor-pointer">
+                  <i class="fa-solid fa-trash-can text-[10px]"></i>
+                </button>
+                <button type="button" onclick="toggleCustNotifDrawer(false)" class="w-6 h-6 text-slate-400 hover:text-white rounded-lg flex items-center justify-center transition hover:bg-slate-800 text-xs cursor-pointer">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- List container -->
+            <div id="cust-notif-list" class="max-h-[320px] overflow-y-auto divide-y divide-slate-100 p-2 space-y-1.5 no-scrollbar">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
         <!-- User Avatar (shown after login) -->
         <div id="header-user-avatar" class="hidden">
           <button onclick="showUserMenu()" class="relative">
@@ -573,20 +618,21 @@
           <!-- Service Grid -->
           <div class="grid grid-cols-2 gap-3">
             <!-- Service 1: Puncture Repair -->
-            <div onclick="selectService('puncture')" id="card-service-puncture" class="cursor-pointer border-2 border-amber-500 bg-amber-50/50 rounded-2xl p-3.5 flex flex-col justify-between transition hover:shadow-md relative overflow-hidden">
-              <div class="absolute -right-2 -bottom-2 text-amber-200/50 text-5xl">
-                <i class="fa-solid fa-circle-dot"></i>
+            <div onclick="selectService('puncture')" id="card-service-puncture" class="cursor-pointer border-2 border-amber-500 bg-amber-50/50 rounded-2xl p-3 flex flex-col justify-between transition hover:shadow-md relative overflow-hidden group">
+              <div class="h-16 w-full rounded-xl overflow-hidden mb-2 relative shadow-inner">
+                <img src="puncture-banner.png" alt="पंचर रिपेयर" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                <span data-i18n="srv_popular" class="absolute top-1 right-1 text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.2 rounded shadow">सबसे लोकप्रिय</span>
               </div>
               <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-900 flex items-center justify-center text-lg shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-900 flex items-center justify-center text-sm shadow-sm">
                   <i class="fa-solid fa-circle-radiation"></i>
                 </div>
-                <span data-i18n="srv_popular" class="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">सबसे लोकप्रिय</span>
+                <span class="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded">ऑन-साइट</span>
               </div>
-              <div class="mt-3 relative z-10">
+              <div class="mt-2 relative z-10">
                 <h4 data-i18n="srv_puncture_title" class="font-bold text-xs text-slate-900">पंचर रिपेयर</h4>
                 <p data-i18n="srv_puncture_desc" class="text-[10px] text-slate-500">ट्यूबलेस / ट्यूब पंचर मरम्मत</p>
-                <p data-i18n="srv_puncture_rate" class="text-xs font-black text-amber-800 mt-1">₹100 + विज़िट चार्ज</p>
+                <p data-i18n="srv_puncture_rate" class="text-xs font-black text-amber-800 mt-0.5">₹100 + विज़िट चार्ज</p>
               </div>
             </div>
 
@@ -2263,6 +2309,24 @@
       if (menuName) menuName.textContent = userName;
       const menuEmail = document.getElementById('menu-email');
       if (menuEmail) menuEmail.textContent = user.email || user.phone || '';
+
+      // ── Restore previously active screen or active live tracking ──
+      try {
+        const activeOrderId = localStorage.getItem('pw_active_order_id');
+        const savedScreen = localStorage.getItem('pw_active_screen');
+        if (activeOrderId) {
+          const lat = parseFloat(localStorage.getItem('pw_active_order_lat') || '0');
+          const lng = parseFloat(localStorage.getItem('pw_active_order_lng') || '0');
+          startCustomerTracking(activeOrderId, lat, lng);
+          if (savedScreen === 'screen-tracking') {
+            navigateTo('screen-tracking');
+          } else if (savedScreen && document.getElementById(savedScreen)) {
+            navigateTo(savedScreen);
+          }
+        } else if (savedScreen && document.getElementById(savedScreen)) {
+          navigateTo(savedScreen);
+        }
+      } catch(e) {}
     }
 
     // ── User menu toggle ───────────────────────────
@@ -2286,7 +2350,13 @@
         try { firebaseAuth.signOut(); } catch(e){}
       }
       currentUser = null;
-      localStorage.removeItem('pw_user');
+      try {
+        localStorage.removeItem('pw_user');
+        localStorage.removeItem('pw_active_screen');
+        localStorage.removeItem('pw_active_order_id');
+        localStorage.removeItem('pw_active_order_lat');
+        localStorage.removeItem('pw_active_order_lng');
+      } catch(e) {}
 
       // Reset header
       const greeting = document.getElementById('header-user-greeting');
@@ -3008,8 +3078,16 @@
 
     // Screen Routing
     function navigateTo(screenId) {
+      if (!screenId) screenId = 'screen-home';
+
+      // Persist active screen so minimizing and reopening returns to the exact same screen
+      try {
+        localStorage.setItem('pw_active_screen', screenId);
+      } catch(e) {}
+
       document.querySelectorAll('#screen-container > section').forEach(sec => sec.classList.add('hidden'));
-      document.getElementById(screenId).classList.remove('hidden');
+      const targetSec = document.getElementById(screenId);
+      if (targetSec) targetSec.classList.remove('hidden');
 
       // Update Nav Bar highlights
       const navHome  = document.getElementById('nav-btn-home');
@@ -3069,6 +3147,15 @@
       currentOrderId = orderId;
       myLat = custLat;
       myLng = custLng;
+
+      // Persist active order so app resumes live tracking seamlessly on reopen
+      try {
+        localStorage.setItem('pw_active_order_id', orderId);
+        if (custLat && custLng) {
+          localStorage.setItem('pw_active_order_lat', String(custLat));
+          localStorage.setItem('pw_active_order_lng', String(custLng));
+        }
+      } catch(e) {}
       // Do NOT navigate to tracking screen yet — wait for mechanic to start
 
       // Connect SSE in background
@@ -3634,6 +3721,11 @@
       generatedOrderId = null;
       currentOrderId = null;
       isOrderActiveOnSite = false;
+      try {
+        localStorage.removeItem('pw_active_order_id');
+        localStorage.removeItem('pw_active_order_lat');
+        localStorage.removeItem('pw_active_order_lng');
+      } catch(e) {}
       navigateTo('screen-home');
     }
 
@@ -3698,6 +3790,11 @@
       if (modal) modal.remove();
       generatedOrderId = null;
       currentOrderId = null;
+      try {
+        localStorage.removeItem('pw_active_order_id');
+        localStorage.removeItem('pw_active_order_lat');
+        localStorage.removeItem('pw_active_order_lng');
+      } catch(e) {}
       navigateTo('screen-home');
     }
 
@@ -4400,7 +4497,237 @@
 
       // 5. In-App Floating Visual Banner
       showInAppFloatingBanner(title, body, url);
+
+      // 6. 🔔 Customer Notification Center (Stored in Bell Icon until viewed)
+      addCustNotification({
+        title: title,
+        body: body,
+        url: url,
+        type: type,
+        timestamp: Date.now()
+      });
     }
+
+    // ══════════════════════════════════════════════
+    //  🔔 CUSTOMER NOTIFICATION CENTER SYSTEM
+    // ══════════════════════════════════════════════
+    let custNotifications = [];
+
+    function loadCustNotifications() {
+      try {
+        const saved = localStorage.getItem('pw_customer_notifications');
+        if (saved) {
+          custNotifications = JSON.parse(saved);
+        }
+      } catch (e) {
+        custNotifications = [];
+      }
+
+      if (!Array.isArray(custNotifications) || custNotifications.length === 0) {
+        custNotifications = [
+          {
+            id: 'cust_notif_welcome',
+            title: '🔔 स्वागत है पंचर-वाला 24×7 में!',
+            body: 'आपकी बुकिंग, लाइव मैकेनिक लोकेशन और सभी अपडेट्स इस बेल आइकन में सुरक्षित रहेंगे।',
+            url: './',
+            type: 'info',
+            timestamp: Date.now() - 60000,
+            read: false
+          }
+        ];
+        try {
+          localStorage.setItem('pw_customer_notifications', JSON.stringify(custNotifications));
+        } catch(e) {}
+      }
+
+      updateCustNotifBadge();
+      renderCustNotifList();
+    }
+
+    function addCustNotification({ title, body, url = './', type = 'info' }) {
+      const item = {
+        id: 'cust_notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        title: title || 'सूचना',
+        body: body || '',
+        url: url,
+        type: type,
+        timestamp: Date.now(),
+        read: false
+      };
+
+      const isDup = custNotifications.some(n =>
+        n.title === item.title && n.body === item.body && Math.abs(item.timestamp - n.timestamp) < 2500
+      );
+      if (isDup) return;
+
+      custNotifications.unshift(item);
+      if (custNotifications.length > 50) custNotifications.length = 50;
+
+      try {
+        localStorage.setItem('pw_customer_notifications', JSON.stringify(custNotifications));
+      } catch (e) {}
+
+      updateCustNotifBadge(true);
+      renderCustNotifList();
+    }
+
+    function updateCustNotifBadge(shouldShake = false) {
+      const unreadCount = custNotifications.filter(n => !n.read).length;
+      const badge = document.getElementById('cust-notif-badge');
+      const ping = document.getElementById('cust-notif-badge-ping');
+      const pill = document.getElementById('cust-notif-unread-pill');
+      const bellBtn = document.getElementById('cust-notif-bell-btn');
+
+      if (pill) pill.textContent = `${unreadCount} नया`;
+
+      if (unreadCount > 0) {
+        if (badge) {
+          badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+          badge.classList.remove('hidden');
+        }
+        if (ping) ping.classList.remove('hidden');
+        if (shouldShake && bellBtn) {
+          bellBtn.classList.remove('animate-bounce');
+          void bellBtn.offsetWidth;
+          bellBtn.classList.add('animate-bounce');
+          setTimeout(() => bellBtn.classList.remove('animate-bounce'), 1200);
+        }
+      } else {
+        if (badge) badge.classList.add('hidden');
+        if (ping) ping.classList.add('hidden');
+      }
+    }
+
+    function toggleCustNotifDrawer(force) {
+      const drawer = document.getElementById('cust-notif-drawer');
+      if (!drawer) return;
+      if (typeof force === 'boolean') {
+        if (force) drawer.classList.remove('hidden');
+        else drawer.classList.add('hidden');
+      } else {
+        drawer.classList.toggle('hidden');
+      }
+      if (!drawer.classList.contains('hidden')) {
+        renderCustNotifList();
+      }
+    }
+
+    function handleCustNotificationClick(id) {
+      const item = custNotifications.find(n => n.id === id);
+      if (!item) return;
+
+      item.read = true;
+      try {
+        localStorage.setItem('pw_customer_notifications', JSON.stringify(custNotifications));
+      } catch (e) {}
+
+      updateCustNotifBadge();
+      renderCustNotifList();
+
+      if (item.type === 'accepted' || item.type === 'mechanic' || (typeof currentOrderId !== 'undefined' && currentOrderId)) {
+        if (typeof goToLiveTracking === 'function') goToLiveTracking();
+      }
+      toggleCustNotifDrawer(false);
+    }
+
+    function markAllCustNotificationsAsRead() {
+      custNotifications.forEach(n => n.read = true);
+      try {
+        localStorage.setItem('pw_customer_notifications', JSON.stringify(custNotifications));
+      } catch (e) {}
+      updateCustNotifBadge();
+      renderCustNotifList();
+      showToast('✅ सभी नोटिफिकेशन पढ़े गए');
+    }
+
+    function clearAllCustNotifications() {
+      if (!confirm('क्या आप सभी नोटिफिकेशन हटाना चाहते हैं?')) return;
+      custNotifications = [];
+      try {
+        localStorage.removeItem('pw_customer_notifications');
+      } catch (e) {}
+      updateCustNotifBadge();
+      renderCustNotifList();
+      showToast('🗑️ सूचनाएं साफ़ की गईं');
+    }
+
+    function renderCustNotifList() {
+      const listEl = document.getElementById('cust-notif-list');
+      if (!listEl) return;
+
+      if (custNotifications.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-8 px-4 text-center space-y-1.5">
+            <div class="w-10 h-10 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center text-lg mx-auto">
+              <i class="fa-solid fa-bell-slash"></i>
+            </div>
+            <p class="text-xs font-bold text-slate-700">अभी कोई सूचना नहीं है</p>
+            <p class="text-[10px] text-slate-400">बुकिंग का स्टेटस यहाँ दिखाई देगा</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = custNotifications.map(n => {
+        let iconHtml = '<i class="fa-solid fa-bell text-amber-500"></i>';
+        let bgIcon = 'bg-amber-50 border-amber-200';
+        if (n.type === 'accepted' || n.type === 'mechanic') {
+          iconHtml = '<i class="fa-solid fa-truck-fast text-blue-600"></i>';
+          bgIcon = 'bg-blue-50 border-blue-200';
+        } else if (n.type === 'done' || n.type === 'completed') {
+          iconHtml = '<i class="fa-solid fa-circle-check text-emerald-600"></i>';
+          bgIcon = 'bg-emerald-50 border-emerald-200';
+        } else if (n.type === 'cancelled') {
+          iconHtml = '<i class="fa-solid fa-ban text-red-600"></i>';
+          bgIcon = 'bg-red-50 border-red-200';
+        }
+
+        const diffSec = Math.floor((Date.now() - (n.timestamp || Date.now())) / 1000);
+        let timeStr = 'अभी';
+        if (diffSec >= 60 && diffSec < 3600) timeStr = `${Math.floor(diffSec / 60)} मि. पहले`;
+        else if (diffSec >= 3600) timeStr = `${Math.floor(diffSec / 3600)} घं. पहले`;
+
+        return `
+          <div onclick="handleCustNotificationClick('${n.id}')"
+            class="group p-2.5 rounded-2xl border transition cursor-pointer flex items-start gap-2.5 relative ${
+              n.read
+                ? 'bg-slate-50/70 border-slate-200/80 opacity-75'
+                : 'bg-white border-amber-300 hover:border-amber-400 shadow-xs'
+            }">
+            <div class="w-8 h-8 rounded-xl border flex items-center justify-center text-xs shrink-0 shadow-xs ${bgIcon}">
+              ${iconHtml}
+            </div>
+            <div class="flex-1 min-w-0 pr-1">
+              <div class="flex items-center justify-between gap-1">
+                <h4 class="text-xs ${n.read ? 'font-bold text-slate-800' : 'font-black text-slate-950'} truncate">
+                  ${n.title}
+                </h4>
+                <span class="text-[9px] ${n.read ? 'text-slate-400' : 'text-amber-800 font-extrabold bg-amber-100 px-1 rounded'} shrink-0">
+                  ${timeStr}
+                </span>
+              </div>
+              <p class="text-[11px] ${n.read ? 'text-slate-500' : 'text-slate-700 font-semibold'} mt-0.5 line-clamp-2 leading-snug">
+                ${n.body}
+              </p>
+            </div>
+            ${!n.read ? `
+              <div class="w-2 h-2 rounded-full bg-amber-500 shadow-sm shrink-0 self-center animate-pulse" title="अपठित"></div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Dismiss Customer Notification Drawer on outside click
+    document.addEventListener('click', e => {
+      const drawer = document.getElementById('cust-notif-drawer');
+      const btn = document.getElementById('cust-notif-bell-btn');
+      if (drawer && btn && !drawer.classList.contains('hidden')) {
+        if (!drawer.contains(e.target) && !btn.contains(e.target)) {
+          drawer.classList.add('hidden');
+        }
+      }
+    });
 
     function showInAppFloatingBanner(title, body, url) {
       let banner = document.getElementById('pw-inapp-notification-banner');
@@ -4545,6 +4872,7 @@
 
     // Init
     initAuth();
+    loadCustNotifications();
     if (typeof currentMechanicContact !== 'undefined') {
       applyMechanicContactUI(currentMechanicContact);
     }
