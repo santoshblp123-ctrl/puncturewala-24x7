@@ -467,7 +467,7 @@
               </div>
               <div class="truncate">
                 <p class="text-[11px] font-bold text-blue-950 truncate flex items-center gap-1.5">
-                  <span id="strip-shop-name">रमेश टायर & पंचर वर्क्स</span>
+                  <span id="strip-shop-name">संतोष टायर & पंचर वर्क्स</span>
                   <span data-i18n="shop_strip_badge" class="text-[9px] bg-blue-200 text-blue-900 font-extrabold px-1.5 py-0.2 rounded-full">स्थायी दुकान</span>
                 </p>
                 <p id="strip-shop-address" class="text-[10px] text-blue-700 font-medium truncate">NH-205 हाईवे, बिलासपुर (HP) • 2.1 KM</p>
@@ -498,7 +498,7 @@
                   <span data-i18n="shop_badge" class="bg-blue-400 text-slate-950 text-[9px] px-1.5 py-0.2 rounded font-black tracking-wider uppercase">स्थायी वर्कशॉप</span>
                   <span id="shop-card-dist" class="bg-white/10 text-blue-200 text-[10px] px-2 py-0.2 rounded font-bold">2.1 KM दूर</span>
                 </div>
-                <h4 id="shop-card-name" class="text-sm font-extrabold text-white leading-tight mt-1">रमेश टायर & पंचर वर्क्स (मेन वर्कशॉप)</h4>
+                <h4 id="shop-card-name" class="text-sm font-extrabold text-white leading-tight mt-1">संतोष टायर & पंचर वर्क्स (मेन वर्कशॉप)</h4>
               </div>
             </div>
 
@@ -926,7 +926,7 @@
               </div>
               <div>
                 <div class="flex items-center gap-1.5">
-                  <p class="font-black text-sm text-slate-900">रमेश मिस्त्री</p>
+                  <p class="font-black text-sm text-slate-900">संतोष मिस्त्री</p>
                   <span class="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">4.9 ★</span>
                 </div>
                 <p class="text-[11px] text-slate-500 font-medium">पंचर एक्सपर्ट • 6 साल अनुभव</p>
@@ -1032,7 +1032,7 @@
               </div>
               <div>
                 <div class="flex items-center gap-1.5">
-                  <h3 class="font-bold text-sm text-slate-900">रमेश मिस्त्री (Puncture Expert)</h3>
+                  <h3 class="font-bold text-sm text-slate-900">संतोष मिस्त्री (Puncture Expert)</h3>
                   <span class="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-bold">4.9 ★</span>
                 </div>
                 <p class="text-xs text-slate-500 font-medium">मोबाइल सर्विस वैन • HP64-BT-9821</p>
@@ -4044,7 +4044,7 @@
 
     // ── Shop / Permanent Workshop Location (Customer App) ──
     let currentShopLocation = {
-      name: 'रमेश टायर & पंचर वर्क्स (मेन वर्कशॉप)',
+      name: 'संतोष टायर & पंचर वर्क्स (मेन वर्कशॉप)',
       address: 'NH-205 हाईवे, बिलासपुर (HP)',
       landmark: '31°19\'48.8"N 76°52\'23.9"E',
       phone: '9876543210',
@@ -4089,7 +4089,7 @@
         .addTo(homeMap)
         .bindPopup(`
           <div style="font-family:sans-serif;min-width:180px;">
-            <p style="font-weight:900;color:#0f172a;font-size:13px;margin:0 0 2px 0;">🏪 ${currentShopLocation.name || 'रमेश टायर & पंचर वर्क्स'}</p>
+            <p style="font-weight:900;color:#0f172a;font-size:13px;margin:0 0 2px 0;">🏪 ${currentShopLocation.name || 'संतोष टायर & पंचर वर्क्स'}</p>
             <p style="font-size:11px;color:#475569;margin:0 0 4px 0;">${currentShopLocation.address || 'NH-205 हाईवे, बिलासपुर (HP)'}</p>
             <p style="font-size:10px;font-weight:bold;color:#059669;margin:0 0 6px 0;">🟢 24×7 वर्कशॉप खुली है</p>
             <a href="https://www.google.com/maps/dir/?api=1&destination=${shopLat},${shopLng}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:bold;text-decoration:none;">🧭 दिशा-निर्देश (Google Maps)</a>
@@ -4166,7 +4166,7 @@
       // Quick Strip
       const stripName = document.getElementById('strip-shop-name');
       const stripAddr = document.getElementById('strip-shop-address');
-      if (stripName) stripName.innerText = data.name || 'रमेश टायर & पंचर वर्क्स';
+      if (stripName) stripName.innerText = data.name || 'संतोष टायर & पंचर वर्क्स';
       if (stripAddr) {
         const shortAddr = data.address ? data.address.split(',')[0] : 'NH-205 हाईवे';
         stripAddr.innerText = `${shortAddr} • ${distStr} KM`;
@@ -4180,7 +4180,7 @@
       const cardTime = document.getElementById('shop-card-timings');
       const callBtn  = document.getElementById('shop-card-call-btn');
 
-      if (cardName) cardName.innerText = data.name || 'रमेश टायर & पंचर वर्क्स';
+      if (cardName) cardName.innerText = data.name || 'संतोष टायर & पंचर वर्क्स';
       if (cardDist) cardDist.innerText = `${distStr} KM दूर`;
       if (cardAddr) cardAddr.innerText = data.address || '';
       if (cardLand) cardLand.innerText = data.landmark || 'हाईवे के पास';
