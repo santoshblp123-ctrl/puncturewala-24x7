@@ -16,9 +16,10 @@
   <link rel="apple-touch-icon" href="./icon-192.png">
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase App & Auth SDK for Real Google Sign-In -->
+  <!-- Firebase App, Auth & Messaging SDK for Real Google Sign-In & FCM -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1985,8 +1986,14 @@
           try {
             firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
           } catch(pe) {}
+          if (firebase.messaging && firebase.messaging.isSupported()) {
+            try {
+              window.firebaseMessaging = firebase.messaging();
+              console.log('[FIREBASE] FCM Messaging initialized!');
+            } catch(me) {}
+          }
           isFirebaseInit = true;
-          console.log('Firebase Auth initialized!');
+          console.log('Firebase Auth & Messaging initialized!');
         } catch (e) {
           console.error('Firebase init error:', e);
         }
