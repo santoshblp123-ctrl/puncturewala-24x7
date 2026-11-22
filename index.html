@@ -359,6 +359,27 @@
     <!-- Main Screens View Area -->
     <main id="screen-container" class="flex-1 overflow-y-auto relative no-scrollbar pb-2 sm:pb-3">
 
+      <!-- 🔔 Notification Enable Banner -->
+      <div id="notif-permission-bar" class="hidden mx-3 sm:mx-4 mt-2 mb-1 bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border border-amber-500/40 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2.5 text-xs shadow-xs animate-fade-in z-20 relative">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center text-sm font-black shrink-0 shadow-xs">
+            <i class="fa-solid fa-bell"></i>
+          </div>
+          <div class="truncate">
+            <p class="font-extrabold text-slate-900 text-xs">🔔 लाइव नोटिफिकेशन चालू करें</p>
+            <p class="text-[10px] text-slate-600 truncate mt-0.5">नई बुकिंग और मैकेनिक वैन लोकेशन का तुरंत अलर्ट पाएं</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" onclick="requestNotificationPermission()" class="bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-[11px] transition shadow-xs">
+            चालू करें
+          </button>
+          <button type="button" onclick="dismissNotificationPrompt()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg text-xs">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
       <!-- ================= 1. HOME & MAP SCREEN ================= -->
       <section id="screen-home" class="block">
         <!-- Real Interactive Map for Customer -->
@@ -3072,6 +3093,12 @@
             const o = data.order;
             if (o.status === 'accepted' && !window.orderAcceptedNotified) {
               window.orderAcceptedNotified = true;
+              triggerPushNotification(
+                '✅ बुकिंग स्वीकार हुई!',
+                'संतोष मिस्त्री ने आपकी बुकिंग स्वीकार कर ली है। मैकेनिक वैन तैयार हो रही है।',
+                './',
+                'accepted'
+              );
               showModal('fa-circle-check', 'बुकिंग स्वीकार कर ली गई! 👍', 'एडमिन ने आपकी बुकिंग स्वीकार कर ली है। मैकेनिक कुछ ही देर में रवाना होने वाला है।');
               const activeBanner = document.getElementById('home-active-booking-banner');
               if (activeBanner) activeBanner.classList.remove('hidden');
@@ -3079,6 +3106,12 @@
             }
             if ((o.status === 'onway' || o.status === 'arrived' || o.status === 'active') && !window.mechanicStartedNotified) {
               window.mechanicStartedNotified = true;
+              triggerPushNotification(
+                '🚐 मैकेनिक वैन निकल चुकी है!',
+                'संतोष मिस्त्री (HP64-BT-9821) आपकी लोकेशन के लिए रवाना हो चुके हैं।',
+                './',
+                'onway'
+              );
               const activeBanner = document.getElementById('home-active-booking-banner');
               if (activeBanner) activeBanner.classList.remove('hidden');
               const banner = document.getElementById('mechanic-onway-banner');
@@ -3090,6 +3123,12 @@
             }
             if (o.status === 'arrived' && !window.mechanicArrivedNotified) {
               window.mechanicArrivedNotified = true;
+              triggerPushNotification(
+                '📍 मैकेनिक पहुंच गया है!',
+                'संतोष मिस्त्री आपकी लोकेशन पर पहुंच चुके हैं। काम शुरू कराने के लिए OTP बताएं: ' + (o.otp || '4821'),
+                './',
+                'arrived'
+              );
               if (o.otp) setCustomerOtp(o.otp);
               showCustomerOtpModal(o.otp || currentCustomerOtp, true);
             }
@@ -3100,6 +3139,12 @@
             if (o.status === 'cancelled' && !window.orderCancelledNotified) {
               window.orderCancelledNotified = true;
               clearInterval(window.trackPollInterval);
+              triggerPushNotification(
+                '⚠️ ऑर्डर रद्द हुआ',
+                'आपकी बुकिंग रद्द कर दी गई है।',
+                './',
+                'cancel'
+              );
               const activeBanner = document.getElementById('home-active-booking-banner');
               if (activeBanner) activeBanner.classList.add('hidden');
               handleOrderCancelledByAdmin(o.cancelReason);
@@ -3107,6 +3152,12 @@
             if (o.status === 'done' && !window.orderDoneNotified) {
               window.orderDoneNotified = true;
               clearInterval(window.trackPollInterval);
+              triggerPushNotification(
+                '🎉 पंचर ठीक हो गया!',
+                'सर्विस पूरी हो गई। कुल बिल: ₹' + (o.total || o.amount || 150) + ' • कृपया रेटिंग दें।',
+                './',
+                'done'
+              );
               const activeBanner = document.getElementById('home-active-booking-banner');
               if (activeBanner) activeBanner.classList.add('hidden');
               showCompletionCelebrationModal({
@@ -4270,13 +4321,169 @@
       }
     }
 
+    // ══════════════════════════════════════════════
+    //  PUSH & LOCAL NOTIFICATIONS SYSTEM
+    // ══════════════════════════════════════════════
+    function playAudio(type = 'info') {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        if (type === 'newOrder' || type === 'arrived') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.35, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.5);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.25, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.4);
+        }
+      } catch(e) {}
+    }
+
+    function triggerPushNotification(title, body, url = './', type = 'info') {
+      // 1. Android Native Notification (via AndroidBridge JavascriptInterface)
+      if (window.AndroidBridge && typeof window.AndroidBridge.showNotification === 'function') {
+        try {
+          window.AndroidBridge.showNotification(title, body, url);
+        } catch(e) {}
+      }
+      // 2. Web Browser Notification API
+      else if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+              reg.showNotification(title, {
+                body: body,
+                icon: './icon-192.png',
+                badge: './icon-192.png',
+                vibrate: [250, 100, 250, 100, 400],
+                tag: 'pw-' + Date.now(),
+                data: { url: url }
+              });
+            }).catch(() => {});
+          } else {
+            new Notification(title, {
+              body: body,
+              icon: './icon-192.png'
+            });
+          }
+        } catch(e) {}
+      }
+
+      // 3. Audio Chime
+      playAudio(type);
+
+      // 4. Hardware vibration
+      try {
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      } catch(e) {}
+
+      // 5. In-App Floating Visual Banner
+      showInAppFloatingBanner(title, body, url);
+    }
+
+    function showInAppFloatingBanner(title, body, url) {
+      let banner = document.getElementById('pw-inapp-notification-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'pw-inapp-notification-banner';
+        banner.className = 'fixed top-3 left-1/2 transform -translate-x-1/2 w-[92%] max-w-md bg-slate-900/95 text-white border-2 border-amber-400/80 rounded-2xl shadow-2xl p-3.5 z-[9999] backdrop-blur-md transition-all duration-300 flex items-start gap-3 cursor-pointer';
+        document.body.appendChild(banner);
+      }
+
+      banner.innerHTML = `
+        <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center text-lg font-black shrink-0 shadow-md">
+          <i class="fa-solid fa-bell animate-bounce"></i>
+        </div>
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex items-center justify-between gap-1">
+            <h4 class="font-extrabold text-xs text-amber-300 truncate">${title}</h4>
+            <span class="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-mono">अभी</span>
+          </div>
+          <p class="text-[11px] text-slate-200 mt-0.5 leading-snug line-clamp-2">${body}</p>
+        </div>
+        <button onclick="event.stopPropagation(); this.parentElement.style.display='none';" class="text-slate-400 hover:text-white p-1 rounded-lg text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      `;
+
+      banner.style.display = 'flex';
+      banner.onclick = () => {
+        banner.style.display = 'none';
+        if (url && url !== './') {
+          if (url.startsWith('http')) window.location.href = url;
+          else if (typeof goToLiveTracking === 'function') goToLiveTracking();
+        }
+      };
+
+      if (window.inAppNotifTimeout) clearTimeout(window.inAppNotifTimeout);
+      window.inAppNotifTimeout = setTimeout(() => {
+        if (banner) banner.style.display = 'none';
+      }, 7000);
+    }
+
+    function initNotificationPermissionPrompt() {
+      if (window.AndroidBridge) return; // Android APK handles notifications natively
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'default') {
+        const dismissed = localStorage.getItem('pw_notif_prompt_dismissed');
+        if (!dismissed) {
+          const bar = document.getElementById('notif-permission-bar');
+          if (bar) bar.classList.remove('hidden');
+        }
+      }
+    }
+
+    function requestNotificationPermission() {
+      if (window.AndroidBridge) {
+        showToast('🔔 Android ऐप नोटिफिकेशन पहले से सक्रिय हैं!');
+        const bar = document.getElementById('notif-permission-bar');
+        if (bar) bar.classList.add('hidden');
+        return;
+      }
+      if (!('Notification' in window)) {
+        showToast('⚠️ इस ब्राउज़र में नोटिफिकेशन सपोर्ट नहीं है');
+        return;
+      }
+      Notification.requestPermission().then(permission => {
+        const bar = document.getElementById('notif-permission-bar');
+        if (bar) bar.classList.add('hidden');
+        if (permission === 'granted') {
+          showToast('🔔 नोटिफिकेशन सक्रिय हो गए! नया अपडेट आने पर तुरंत अलर्ट मिलेगा।');
+          triggerPushNotification('🔔 PunctureWala 24x7', 'नोटिफिकेशन सफलतापूर्वक सक्रिय हो गए हैं!', './', 'info');
+        } else {
+          localStorage.setItem('pw_notif_prompt_dismissed', '1');
+        }
+      });
+    }
+
+    function dismissNotificationPrompt() {
+      localStorage.setItem('pw_notif_prompt_dismissed', '1');
+      const bar = document.getElementById('notif-permission-bar');
+      if (bar) bar.classList.add('hidden');
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4')
+        navigator.serviceWorker.register('./sw.js?v=5')
           .then(reg => {
             if (reg) reg.update();
           })
           .catch(() => {});
+        initNotificationPermissionPrompt();
       });
     }
 
