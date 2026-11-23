@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "USR-1001",
+    "uid": "fhkt9PncPIRcaw58XsCzyNw609v1",
+    "name": "Santosh Kumar",
+    "email": "santoshblp123@gmail.com",
+    "phone": "",
+    "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocLUA76l9zsp1EraTbknMiiP0GlRsv4usWpOZyreA-eV_5iIkRDK=s96-c",
+    "provider": "google",
+    "firstLogin": 1795343360431,
+    "lastLogin": 1795353154681,
+    "loginCount": 4,
+    "totalOrders": 0,
+    "device": "Mobile Web"
+  }
+]
