@@ -1565,6 +1565,13 @@
       return 'https://puncherwala.in';
     })();
 
+    // ── Smart Server 403 Forbidden Guard & Adaptive Backoff ──
+    let customerServerBlocked403 = false;
+    let customerSSERetryDelay = 3000;
+    let lastVanPollTime = 0;
+    let lastContactPollTime = 0;
+    let lastShopPollTime = 0;
+
     // ══════════════════════════════════════════════
     //  I18N / MULTI-LANGUAGE SYSTEM (Hindi & English)
     // ══════════════════════════════════════════════
@@ -2745,9 +2752,20 @@
     }
 
     function pollVanStatus() {
+      const now = Date.now();
+      if (customerServerBlocked403 && (now - lastVanPollTime < 15000)) return;
+      lastVanPollTime = now;
+
       fetch(`${SERVER}/api/van-status`)
-        .then(r => r.json())
+        .then(r => {
+          if (r.status === 403) {
+            customerServerBlocked403 = true;
+            throw new Error('HTTP 403 Forbidden');
+          }
+          return r.json();
+        })
         .then(data => {
+          customerServerBlocked403 = false;
           if (data && typeof data.free === 'boolean') {
             applyVanStatus(data.free, data.busyMinutes || 15, data.queueCount || 1);
           }
@@ -4179,9 +4197,20 @@
     } catch(e) {}
 
     function loadMechanicContact() {
+      const now = Date.now();
+      if (customerServerBlocked403 && (now - lastContactPollTime < 15000)) return;
+      lastContactPollTime = now;
+
       fetch(`${SERVER}/api/mechanic-contact`)
-        .then(r => r.json())
+        .then(r => {
+          if (r.status === 403) {
+            customerServerBlocked403 = true;
+            throw new Error('HTTP 403 Forbidden');
+          }
+          return r.json();
+        })
         .then(data => {
+          customerServerBlocked403 = false;
           if (data && data.phone) {
             applyMechanicContactUI(data);
           }
@@ -4834,12 +4863,17 @@
     // ── Real-Time Live Sync with Admin (SSE) ──
     let customerSSE = null;
     function connectCustomerLiveSSE() {
+      if (customerServerBlocked403) return;
       try {
-        if (customerSSE) customerSSE.close();
+        if (customerSSE) {
+          try { customerSSE.close(); } catch(e){}
+        }
         customerSSE = new EventSource(`${SERVER}/api/events`);
         console.log('[CUSTOMER SSE] Connecting to:', `${SERVER}/api/events`);
 
         customerSSE.onopen = () => {
+          customerServerBlocked403 = false;
+          customerSSERetryDelay = 3000;
           console.log('[CUSTOMER SSE] Connected successfully to live stream!');
         };
 
@@ -4876,7 +4910,11 @@
           } catch(err){}
         });
 
-        customerSSE.onerror = () => {};
+        customerSSE.onerror = () => {
+          try { customerSSE.close(); } catch(e){}
+          customerSSERetryDelay = Math.min(customerSSERetryDelay * 1.5, 30000);
+          setTimeout(connectCustomerLiveSSE, customerSSERetryDelay);
+        };
       } catch(e){}
     }
 
