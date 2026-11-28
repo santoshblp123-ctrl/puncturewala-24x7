@@ -81,26 +81,12 @@ function loadUsersFromDisk() {
 }
 loadUsersFromDisk();
 
-function loadOrdersFromDisk() {
-  try {
-    if (fs.existsSync(ORDERS_FILE)) {
-      const raw = fs.readFileSync(ORDERS_FILE, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        orders = parsed;
-      }
-    }
-  } catch(e) {}
-}
-loadOrdersFromDisk();
-let vanStatus       = { free: true, busyMinutes: 0 };
-let adminClients    = []; // SSE connections from Admin
+let orderCounter = 1000;
+let vanStatus = { free: true, busyMinutes: 0 };
+let adminClients = []; // SSE connections from Admin
 let customerClients = {}; // SSE connections from Customer { orderId: [res,...] }
-let mechanicLocs    = {}; // Latest mechanic location per orderId
-let otpStore        = {}; // OTP per orderId { otp, verified }
-orders.forEach(o => {
-  if (o.otp) otpStore[o.id] = { otp: o.otp, verified: false, createdAt: Date.now() };
-});
+let mechanicLocs = {}; // Latest mechanic location per orderId
+let otpStore = {}; // OTP per orderId { otp, verified }
 let mechanicContact = {
   name: 'SANTOSH (ऑन-ड्यूटी)',
   phone: '9876543210',
@@ -131,18 +117,7 @@ const DEFAULT_RATES = {
 };
 let ratesConfig = { ...DEFAULT_RATES };
 
-function loadRatesFromDisk() {
-  try {
-    if (fs.existsSync(STATE_FILE)) {
-      const stateData = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-      if (stateData && stateData.rates) {
-        ratesConfig = { ...DEFAULT_RATES, ...stateData.rates };
-      }
-    }
-  } catch(e) {}
-}
-
-function saveRatesToDisk() {
+function saveStateToDisk() {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     let stateData = {};
@@ -150,20 +125,94 @@ function saveRatesToDisk() {
       try { stateData = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {}; } catch(e) {}
     }
     stateData.rates = ratesConfig;
+    stateData.orderCounter = orderCounter;
+    stateData.vanStatus = vanStatus;
+    stateData.mechanicContact = mechanicContact;
+    stateData.shopLocation = shopLocation;
     fs.writeFileSync(STATE_FILE, JSON.stringify(stateData, null, 2), 'utf8');
   } catch(e) {}
 }
-loadRatesFromDisk();
+
+function saveRatesToDisk() { saveStateToDisk(); }
+
+function loadStateFromDisk() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const stateData = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {};
+      if (stateData.rates) ratesConfig = { ...DEFAULT_RATES, ...stateData.rates };
+      if (typeof stateData.orderCounter === 'number' && stateData.orderCounter > orderCounter) {
+        orderCounter = stateData.orderCounter;
+      }
+      if (stateData.vanStatus && typeof stateData.vanStatus.free === 'boolean') {
+        vanStatus = { ...vanStatus, ...stateData.vanStatus };
+      }
+      if (stateData.mechanicContact && stateData.mechanicContact.phone) {
+        mechanicContact = { ...mechanicContact, ...stateData.mechanicContact };
+      }
+      if (stateData.shopLocation && stateData.shopLocation.name) {
+        shopLocation = { ...shopLocation, ...stateData.shopLocation };
+      }
+    }
+  } catch(e) {}
+}
+loadStateFromDisk();
+
+function loadOrdersFromDisk() {
+  try {
+    if (fs.existsSync(ORDERS_FILE)) {
+      const raw = fs.readFileSync(ORDERS_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        orders = parsed;
+      }
+    }
+  } catch(e) {}
+
+  // Ensure orderCounter is always strictly above any existing PW-<num> ID on disk
+  orders.forEach(o => {
+    const num = parseInt(String(o.id || '').replace(/\D/g, ''), 10);
+    if (Number.isFinite(num) && num > orderCounter) {
+      orderCounter = num;
+    }
+  });
+
+  // Deduplicate any pre-existing colliding IDs (oldest retains ID, newer gets next unique ID)
+  const seen = new Set();
+  let fixedDuplicates = false;
+  for (let i = orders.length - 1; i >= 0; i--) {
+    const o = orders[i];
+    if (!o.id || seen.has(o.id)) {
+      let nextId;
+      do { nextId = 'PW-' + (++orderCounter); } while (seen.has(nextId));
+      o.id = nextId;
+      fixedDuplicates = true;
+    }
+    seen.add(o.id);
+    if (o.otp) otpStore[o.id] = { otp: o.otp, verified: Boolean(o.otpVerified), createdAt: o.timestamp || Date.now() };
+  }
+  if (fixedDuplicates) {
+    saveOrdersToDisk();
+    saveStateToDisk();
+  }
+}
+loadOrdersFromDisk();
+
 let savedVehicleModels = [
   'Maruti Swift', 'Hyundai Creta', 'Hero Splendor', 'Mahindra Thar',
   'Mahindra Scorpio', 'Honda Activa', 'Bajaj Pulsar', 'Maruti Baleno',
   'Toyota Innova', 'Tata Nexon', 'Hyundai i20', 'Royal Enfield Classic 350'
 ];
 let feedbackList    = [];
-let orderCounter    = 1000;
 
 // ── Utility ────────────────────────────────────────────────────────────────
-function genOrderId() { return 'PW-' + (++orderCounter); }
+function genOrderId() {
+  let candidate;
+  do {
+    candidate = 'PW-' + (++orderCounter);
+  } while (orders.some(o => o.id === candidate));
+  saveStateToDisk();
+  return candidate;
+}
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -288,7 +337,10 @@ const server = http.createServer(async (req, res) => {
     otpStore[orderId] = { otp, verified: false, createdAt: Date.now() };
 
     const ord = orders.find(o => o.id === orderId);
-    if (ord) ord.otp = otp;
+    if (ord) {
+      ord.otp = otp;
+      saveOrdersToDisk();
+    }
 
     // Send OTP to customer via SSE
     const clients = customerClients[orderId] || [];
@@ -629,18 +681,34 @@ const server = http.createServer(async (req, res) => {
     return json(res, { success: true });
   }
 
-  // ── GET /api/track/:orderId  (Customer SSE for mechanic location) ───────
+  // ── GET /api/track/:orderId  (JSON polling OR Customer SSE stream) ─────
   if (path.startsWith('/api/track/') && method === 'GET') {
-    const orderId = path.replace('/api/track/', '');
+    const orderId = decodeURIComponent(path.replace('/api/track/', '').split('?')[0]);
+    const acceptHeader = String(req.headers.accept || '').toLowerCase();
+    const isSSE = acceptHeader.includes('text/event-stream') && parsed.query.json !== '1';
+    const existingOrder = orders.find(o => o.id === orderId);
+
+    // Crucial: When polled via fetch(), return JSON and close response immediately!
+    if (!isSSE) {
+      if (!existingOrder) {
+        return json(res, { error: 'Order not found' }, 404);
+      }
+      return json(res, {
+        success: true,
+        order: existingOrder,
+        location: mechanicLocs[orderId] || null,
+        status: existingOrder.status
+      });
+    }
+
     cors(res);
     res.writeHead(200, {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':    'keep-alive',
+      'Content-Type':      'text/event-stream; charset=utf-8',
+      'Cache-Control':     'no-cache, no-transform',
+      'Connection':        'keep-alive',
+      'X-Accel-Buffering': 'no',
     });
     res.write(`event: connected\ndata: {"orderId":"${orderId}"}\n\n`);
-
-    const existingOrder = orders.find(o => o.id === orderId);
 
     // If order is active (काम चालू है) -> send mechanic location right at customer location
     if (existingOrder && existingOrder.status === 'active') {
@@ -702,10 +770,15 @@ const server = http.createServer(async (req, res) => {
     customerClients[orderId].push(res);
     console.log(`[TRACK SSE] Customer watching order ${orderId}. Total: ${customerClients[orderId].length}`);
 
-    req.on('close', () => {
+    const trackKeepAlive = setInterval(() => {
+      try { res.write(`: ping\n\n`); } catch { clearInterval(trackKeepAlive); }
+    }, 20000);
+    const cleanupTrack = () => {
+      clearInterval(trackKeepAlive);
       customerClients[orderId] = (customerClients[orderId] || []).filter(c => c !== res);
-      console.log(`[TRACK SSE] Customer disconnected from ${orderId}`);
-    });
+    };
+    req.on('close', cleanupTrack);
+    res.on('close', cleanupTrack);
     return;
   }
 
@@ -873,10 +946,15 @@ const server = http.createServer(async (req, res) => {
     res.write(`event: rates-updated\ndata: ${JSON.stringify(ratesConfig)}\n\n`);
     res.write(`event: mechanics-updated\ndata: ${JSON.stringify(mechanicsList)}\n\n`);
 
-    req.on('close', () => {
+    const sseKeepAlive = setInterval(() => {
+      try { res.write(`: ping\n\n`); } catch { clearInterval(sseKeepAlive); }
+    }, 20000);
+    const cleanupSse = () => {
+      clearInterval(sseKeepAlive);
       adminClients = adminClients.filter(c => c !== res);
-      console.log(`[SSE] Admin disconnected. Remaining: ${adminClients.length}`);
-    });
+    };
+    req.on('close', cleanupSse);
+    res.on('close', cleanupSse);
     return; // keep connection alive
   }
 
@@ -886,6 +964,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST') {
       const body = await readBody(req);
       mechanicContact = { ...mechanicContact, ...body };
+      saveStateToDisk();
       pushToAdmin('mechanic-contact-updated', mechanicContact);
       console.log(`[MECHANIC CONTACT UPDATED] Phone: ${mechanicContact.phone} Name: ${mechanicContact.name}`);
       return json(res, { success: true, mechanicContact });
@@ -898,6 +977,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST') {
       const body = await readBody(req);
       vanStatus  = { ...vanStatus, ...body };
+      saveStateToDisk();
       pushToAdmin('van-status', vanStatus);
       console.log(`[VAN STATUS] free=${vanStatus.free}`);
       return json(res, { success: true, vanStatus });
@@ -910,6 +990,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST') {
       const body = await readBody(req);
       shopLocation = { ...shopLocation, ...body };
+      saveStateToDisk();
       pushToAdmin('shop-location-updated', shopLocation);
       console.log(`[SHOP LOCATION UPDATED] Name: ${shopLocation.name} Address: ${shopLocation.address}`);
       return json(res, { success: true, shopLocation });

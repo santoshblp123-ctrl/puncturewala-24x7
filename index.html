@@ -3144,7 +3144,12 @@
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify(payload),
         })
-        .then(r => r.json())
+        .then(r => {
+          if (r.status === 403) customerServerBlocked403 = true;
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          customerServerBlocked403 = false;
+          return r.json();
+        })
         .then(data => {
           const orderId = data.orderId || 'PW-???';
           const otp = data.otp || String(Math.floor(1000 + Math.random() * 9000));
@@ -3320,17 +3325,32 @@
         trackSSE = new EventSource(`${SERVER}/api/track/${orderId}`);
       } catch(e) {}
 
-      // Smart Fallback Polling every 1.5s (guarantees real-time updates even if SSE is buffered)
+      // Smart Fallback JSON Polling every 3s (with 403 guard & fast JSON response)
       if (window.trackPollInterval) clearInterval(window.trackPollInterval);
       window.orderAcceptedNotified = false;
       window.mechanicStartedNotified = false;
       window.mechanicArrivedNotified = false;
       window.orderCancelledNotified = false;
       window.orderDoneNotified = false;
+      let lastTrackPollTime = 0;
 
       window.trackPollInterval = setInterval(() => {
-        fetch(`${SERVER}/api/track/${orderId}`)
-          .then(r => r.json())
+        const now = Date.now();
+        if (customerServerBlocked403 && (now - lastTrackPollTime < 15000)) return;
+        lastTrackPollTime = now;
+
+        fetch(`${SERVER}/api/track/${orderId}?json=1`, {
+          headers: { 'Accept': 'application/json' }
+        })
+          .then(r => {
+            if (r.status === 403) {
+              customerServerBlocked403 = true;
+              throw new Error('HTTP 403 Forbidden');
+            }
+            if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status);
+            customerServerBlocked403 = false;
+            return r.json();
+          })
           .then(data => {
             if (data && data.error && (data.error === 'Order not found' || data.error.includes('not found'))) {
               if (window.trackPollInterval) clearInterval(window.trackPollInterval);
@@ -3424,10 +3444,12 @@
             }
           })
           .catch(() => {});
-      }, 1500);
+      }, 3000);
 
       // 1. Order accepted by Admin
       trackSSE.addEventListener('order-accepted', () => {
+        if (window.orderAcceptedNotified) return;
+        window.orderAcceptedNotified = true;
         showModal('fa-circle-check', 'बुकिंग स्वीकार कर ली गई! 👍', 'एडमिन ने आपकी बुकिंग स्वीकार कर ली है। मैकेनिक कुछ ही देर में रवाना होने वाला है।');
         if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
         const activeBanner = document.getElementById('home-active-booking-banner');
@@ -3524,6 +3546,12 @@
           }
         } catch (err) {}
       });
+
+      trackSSE.onerror = () => {
+        if (customerServerBlocked403) {
+          try { trackSSE.close(); } catch (err) {}
+        }
+      };
     }
 
     function handleOrderCompletedByAdmin(data) {
