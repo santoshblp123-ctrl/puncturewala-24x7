@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -15,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -44,21 +46,25 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccess(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
 
+        // Expose AndroidBridge for external Google Maps & native links
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public boolean isNative() {
+                return true;
+            }
+
+            @JavascriptInterface
+            public void openExternalUrl(final String rawUrl) {
+                runOnUiThread(() -> openExternalTarget(rawUrl));
+            }
+        }, "AndroidBridge");
+
         // Handle External links, dialer, Google Maps
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                if (url.startsWith("tel:")) {
-                    Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
-                    startActivity(intent);
-                    return true;
-                } else if (url.startsWith("mailto:") || url.startsWith("https://www.google.com/maps")) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    startActivity(intent);
-                    return true;
-                }
-                return false;
+                return openExternalTarget(url);
             }
         });
 
@@ -97,6 +103,51 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    private boolean openExternalTarget(String rawUrl) {
+        if (rawUrl == null) return false;
+        String trimmed = rawUrl.trim();
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("tel:")) {
+            try {
+                startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse(trimmed)));
+            } catch (Exception ignored) {}
+            return true;
+        }
+        if (lower.startsWith("intent:")) {
+            try {
+                Intent intent = Intent.parseUri(trimmed, Intent.URI_INTENT_SCHEME);
+                if (intent != null) {
+                    try {
+                        startActivity(intent);
+                        return true;
+                    } catch (Exception ignored) {
+                        String fallback = intent.getStringExtra("browser_fallback_url");
+                        if (fallback != null && !fallback.trim().isEmpty()) {
+                            return openExternalTarget(fallback);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+            return true;
+        }
+        boolean isMaps = lower.startsWith("geo:") || lower.contains("maps.google.") || lower.contains("google.com/maps") || lower.contains("maps.app.goo.gl") || lower.contains("goo.gl/maps");
+        if (isMaps || lower.startsWith("mailto:") || lower.startsWith("whatsapp:") || lower.contains("wa.me/") || lower.contains("api.whatsapp.com")) {
+            if (isMaps) {
+                try {
+                    Intent mapsIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(trimmed));
+                    mapsIntent.setPackage("com.google.android.apps.maps");
+                    startActivity(mapsIntent);
+                    return true;
+                } catch (Exception ignored) {}
+            }
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(trimmed)));
+            } catch (Exception ignored) {}
+            return true;
+        }
+        return false;
     }
 
     @Override

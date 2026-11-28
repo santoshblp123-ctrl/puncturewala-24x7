@@ -4442,7 +4442,7 @@
             <p style="font-weight:900;color:#0f172a;font-size:13px;margin:0 0 2px 0;">🏪 ${currentShopLocation.name || 'संतोष टायर & पंचर वर्क्स'}</p>
             <p style="font-size:11px;color:#475569;margin:0 0 4px 0;">${currentShopLocation.address || 'NH-205 हाईवे, बिलासपुर (HP)'}</p>
             <p style="font-size:10px;font-weight:bold;color:#059669;margin:0 0 6px 0;">🟢 24×7 वर्कशॉप खुली है</p>
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${shopLat},${shopLng}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:bold;text-decoration:none;">🧭 दिशा-निर्देश (Google Maps)</a>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${shopLat},${shopLng}" target="_blank" onclick="return openGoogleMapsUrl(this.href, event)" style="display:inline-block;background:#2563eb;color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:bold;text-decoration:none;">🧭 दिशा-निर्देश (Google Maps)</a>
           </div>
         `);
 
@@ -4585,13 +4585,39 @@
       }
     }
 
+    function openGoogleMapsUrl(url, ev) {
+      if (!url || url === '#' || url.endsWith('#')) {
+        if (ev) ev.preventDefault();
+        return false;
+      }
+      if (window.AndroidBridge && typeof window.AndroidBridge.openExternalUrl === 'function') {
+        if (ev) ev.preventDefault();
+        window.AndroidBridge.openExternalUrl(url);
+        return false;
+      }
+      if (ev) ev.preventDefault();
+      window.open(url, '_blank', 'noopener');
+      return false;
+    }
+
+    document.addEventListener('click', function (ev) {
+      if (!(window.AndroidBridge && typeof window.AndroidBridge.openExternalUrl === 'function')) return;
+      const anchor = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') || '';
+      if (/^(geo:|intent:|tel:|mailto:)|google\.com\/maps|maps\.google\.|maps\.app\.goo\.gl|goo\.gl\/maps|wa\.me\/|api\.whatsapp\.com/i.test(href)) {
+        ev.preventDefault();
+        window.AndroidBridge.openExternalUrl(anchor.href || href);
+      }
+    });
+
     function openShopGoogleMaps() {
       if (currentShopLocation && currentShopLocation.lat && currentShopLocation.lng) {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${currentShopLocation.lat},${currentShopLocation.lng}`;
-        window.open(url, '_blank');
+        openGoogleMapsUrl(url);
       } else if (currentShopLocation && currentShopLocation.address) {
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentShopLocation.address)}`;
-        window.open(url, '_blank');
+        openGoogleMapsUrl(url);
       } else {
         alert('शॉप की लोकेशन उपलब्ध नहीं है');
       }
