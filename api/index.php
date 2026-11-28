@@ -44,6 +44,21 @@ if (!file_exists($usersFile)) {
     file_put_contents($usersFile, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+function getDefaultRates() {
+    return [
+        'baseVisit' => 150,
+        'freeKm' => 2,
+        'perKm' => 15,
+        'vipCharge' => 150,
+        'nightCharge' => 100,
+        'bikePuncture' => 60,
+        'carPuncture' => 100,
+        'tubePuncture' => 120,
+        'stepneyChange' => 150,
+        'airRefill' => 50
+    ];
+}
+
 // Initialize default state if not exists
 if (!file_exists($stateFile)) {
     $defaultState = [
@@ -63,6 +78,7 @@ if (!file_exists($stateFile)) {
             'lng' => 76.8732986,
             'distanceKm' => 2.1
         ],
+        'rates' => getDefaultRates(),
         'mechanicLocs' => [],
         'orderCounter' => 1042
     ];
@@ -380,6 +396,33 @@ if ($route === 'shop-location') {
     }
 }
 
+// ── GET/POST /api/rates ────────────────────────────────
+if ($route === 'rates') {
+    $state = getState();
+    $defaults = getDefaultRates();
+    if ($method === 'GET') {
+        $rates = array_merge($defaults, $state['rates'] ?? []);
+        jsonResponse($rates);
+    }
+    if ($method === 'POST') {
+        $body = getRequestBody();
+        $existing = array_merge($defaults, $state['rates'] ?? []);
+        $updated = $existing;
+        foreach ($defaults as $k => $v) {
+            if (isset($body[$k]) && is_numeric($body[$k])) {
+                $val = (float)$body[$k];
+                if ($val >= 0) {
+                    $updated[$k] = $val;
+                }
+            }
+        }
+        $updated['updatedAt'] = time() * 1000;
+        $state['rates'] = $updated;
+        saveState($state);
+        jsonResponse(['success' => true, 'rates' => $state['rates']]);
+    }
+}
+
 // ── GET/POST /api/mechanics ────────────────────────────
 if ($route === 'mechanics') {
     if ($method === 'GET') {
@@ -499,6 +542,8 @@ if ($route === 'events' && $method === 'GET') {
     if (!empty($state['shopLocation'])) {
         echo "event: shop-location-updated\ndata: " . json_encode($state['shopLocation']) . "\n\n";
     }
+    $ratesData = array_merge(getDefaultRates(), $state['rates'] ?? []);
+    echo "event: rates-updated\ndata: " . json_encode($ratesData) . "\n\n";
     echo "event: mechanics-updated\ndata: " . json_encode(getMechanics(), JSON_UNESCAPED_UNICODE) . "\n\n";
     echo "retry: 3000\n\n";
     @flush();

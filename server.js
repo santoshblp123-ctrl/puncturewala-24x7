@@ -116,6 +116,44 @@ let shopLocation = {
   lng: 76.8732986,
   distanceKm: 2.1
 };
+const STATE_FILE = nodePath.join(DATA_DIR, 'state.json');
+const DEFAULT_RATES = {
+  baseVisit: 150,
+  freeKm: 2,
+  perKm: 15,
+  vipCharge: 150,
+  nightCharge: 100,
+  bikePuncture: 60,
+  carPuncture: 100,
+  tubePuncture: 120,
+  stepneyChange: 150,
+  airRefill: 50
+};
+let ratesConfig = { ...DEFAULT_RATES };
+
+function loadRatesFromDisk() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const stateData = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      if (stateData && stateData.rates) {
+        ratesConfig = { ...DEFAULT_RATES, ...stateData.rates };
+      }
+    }
+  } catch(e) {}
+}
+
+function saveRatesToDisk() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    let stateData = {};
+    if (fs.existsSync(STATE_FILE)) {
+      try { stateData = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {}; } catch(e) {}
+    }
+    stateData.rates = ratesConfig;
+    fs.writeFileSync(STATE_FILE, JSON.stringify(stateData, null, 2), 'utf8');
+  } catch(e) {}
+}
+loadRatesFromDisk();
 let savedVehicleModels = [
   'Maruti Swift', 'Hyundai Creta', 'Hero Splendor', 'Mahindra Thar',
   'Mahindra Scorpio', 'Honda Activa', 'Bajaj Pulsar', 'Maruti Baleno',
@@ -832,6 +870,7 @@ const server = http.createServer(async (req, res) => {
     res.write(`event: mechanic-contact-updated\ndata: ${JSON.stringify(mechanicContact)}\n\n`);
     res.write(`event: van-status\ndata: ${JSON.stringify(vanStatus)}\n\n`);
     res.write(`event: shop-location-updated\ndata: ${JSON.stringify(shopLocation)}\n\n`);
+    res.write(`event: rates-updated\ndata: ${JSON.stringify(ratesConfig)}\n\n`);
     res.write(`event: mechanics-updated\ndata: ${JSON.stringify(mechanicsList)}\n\n`);
 
     req.on('close', () => {
@@ -874,6 +913,27 @@ const server = http.createServer(async (req, res) => {
       pushToAdmin('shop-location-updated', shopLocation);
       console.log(`[SHOP LOCATION UPDATED] Name: ${shopLocation.name} Address: ${shopLocation.address}`);
       return json(res, { success: true, shopLocation });
+    }
+  }
+
+  // ── GET/POST /api/rates ──────────────────────────────────────────────────
+  if (path === '/api/rates') {
+    if (method === 'GET') return json(res, ratesConfig);
+    if (method === 'POST') {
+      const body = await readBody(req);
+      const updated = { ...ratesConfig };
+      Object.keys(DEFAULT_RATES).forEach(k => {
+        if (body[k] !== undefined && body[k] !== null && body[k] !== '') {
+          const val = parseFloat(body[k]);
+          if (Number.isFinite(val) && val >= 0) updated[k] = val;
+        }
+      });
+      updated.updatedAt = Date.now();
+      ratesConfig = updated;
+      saveRatesToDisk();
+      pushToAdmin('rates-updated', ratesConfig);
+      console.log(`[RATES UPDATED] Base: ₹${ratesConfig.baseVisit}, PerKM: ₹${ratesConfig.perKm}, CarPuncture: ₹${ratesConfig.carPuncture}`);
+      return json(res, { success: true, rates: ratesConfig });
     }
   }
 

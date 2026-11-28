@@ -1155,7 +1155,7 @@
             </div>
             <div id="booking-summary-fast-row" class="hidden flex justify-between text-amber-700 font-semibold">
               <span>सुपरफास्ट एक्सप्रेस प्रायोरिटी</span>
-              <span>₹150</span>
+              <span id="booking-summary-fast-cost">₹150</span>
             </div>
             <div class="border-t border-slate-200 pt-1.5 flex justify-between font-bold text-slate-900 text-sm">
               <span>कुल देय राशि (Cash / UPI on Site):</span>
@@ -1186,15 +1186,15 @@
           <h3 data-i18n="rate_dist_rules" class="text-xs font-bold text-slate-800 uppercase tracking-wider text-slate-400">विज़िट व दूरी का नियम</h3>
           <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-100">
             <span data-i18n="rate_base_text">बेस विज़िट चार्ज (पहले 2 किमी तक)</span>
-            <span class="font-bold text-slate-900">₹150</span>
+            <span id="rc-base-visit" class="font-bold text-slate-900">₹150</span>
           </div>
           <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-100">
             <span data-i18n="rate_per_km_text">2 किमी के बाद प्रति किलोमीटर</span>
-            <span class="font-bold text-amber-700">₹15 / KM</span>
+            <span id="rc-per-km" class="font-bold text-amber-700">₹15 / KM</span>
           </div>
           <div class="flex justify-between items-center text-xs">
             <span data-i18n="rate_vip_text">VIP सुपरफास्ट सर्विस (Queue Jump)</span>
-            <span class="font-bold text-red-600">+₹150 अतिरिक्त</span>
+            <span id="rc-vip-charge" class="font-bold text-red-600">+₹150 अतिरिक्त</span>
           </div>
         </div>
 
@@ -1202,23 +1202,23 @@
           <h3 data-i18n="rate_service_rules" class="text-xs font-bold text-slate-800 uppercase tracking-wider text-slate-400">सर्विस चार्ज (काम के हिसाब से)</h3>
           <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-100">
             <span data-i18n="rate_bike_puncture">बाइक ट्यूबलेस पंचर (प्रति पंचर)</span>
-            <span class="font-bold">₹60</span>
+            <span id="rc-bike-puncture" class="font-bold">₹60</span>
           </div>
           <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-100">
             <span data-i18n="rate_car_puncture">कार / एसयूवी ट्यूबलेस पंचर</span>
-            <span class="font-bold">₹100</span>
+            <span id="rc-car-puncture" class="font-bold">₹100</span>
           </div>
           <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-100">
             <span data-i18n="rate_tube_puncture">ट्यूब पंचर (पहिए खोलने व पैच लगाने सहित)</span>
-            <span class="font-bold">₹120</span>
+            <span id="rc-tube-puncture" class="font-bold">₹120</span>
           </div>
           <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-100">
             <span data-i18n="rate_stepney">स्टेफनी पहिया बदलना (जैक लेबर)</span>
-            <span class="font-bold">₹150</span>
+            <span id="rc-stepney" class="font-bold">₹150</span>
           </div>
           <div class="flex justify-between items-center text-xs">
             <span data-i18n="rate_air">चारों पहियों में हवा / नाइट्रोजन चेक</span>
-            <span class="font-bold">₹50</span>
+            <span id="rc-air" class="font-bold">₹50</span>
           </div>
         </div>
 
@@ -1996,7 +1996,8 @@
       if (currentUser) {
         showApp(currentUser);
       }
-      if (typeof recalculateFare === 'function') recalculateFare();
+      if (typeof applyRatesUI === 'function' && typeof currentRates !== 'undefined') applyRatesUI(currentRates);
+      else if (typeof recalculateFare === 'function') recalculateFare();
       if (typeof pollVanStatus === 'function') pollVanStatus();
       if (typeof filterModelDropdown === 'function') filterModelDropdown();
       if (typeof applyMechanicContactUI === 'function' && typeof currentMechanicContact !== 'undefined') applyMechanicContactUI(currentMechanicContact);
@@ -2587,23 +2588,150 @@
     let busyMinutesLeft = 18;
     let busyInterval = null;
 
-    // Rates config
-    const BASE_VISIT_FEE = 150; // includes up to 2 km
-    const PER_KM_RATE = 15;
-    const FAST_SERVICE_SURCHARGE = 150;
-
-    const SERVICE_PRICES = {
-      puncture: { bike: 60, car: 100, suv: 120, truck: 200, name: 'पंचर रिपेयर' },
-      air: { bike: 30, car: 50, suv: 60, truck: 100, name: 'एयर रीफिल' },
-      stepney: { bike: 80, car: 150, suv: 180, truck: 300, name: 'स्टेफनी चेंज' }
+    // Rates config (Synced dynamically with Admin Panel)
+    const DEFAULT_RATES = {
+      baseVisit: 150,
+      freeKm: 2,
+      perKm: 15,
+      vipCharge: 150,
+      nightCharge: 100,
+      bikePuncture: 60,
+      carPuncture: 100,
+      tubePuncture: 120,
+      stepneyChange: 150,
+      airRefill: 50
     };
 
+    let currentRates = (function() {
+      try {
+        const cached = localStorage.getItem('pw_rates_config');
+        if (cached) return { ...DEFAULT_RATES, ...JSON.parse(cached) };
+      } catch(e) {}
+      return { ...DEFAULT_RATES };
+    })();
+
+    let BASE_VISIT_FEE = currentRates.baseVisit;
+    let FREE_KM_LIMIT = currentRates.freeKm;
+    let PER_KM_RATE = currentRates.perKm;
+    let FAST_SERVICE_SURCHARGE = currentRates.vipCharge;
+    let NIGHT_CHARGE_FEE = currentRates.nightCharge;
+
+    let SERVICE_PRICES = {
+      puncture: { bike: 60, car: 100, suv: 100, truck: 200, name: 'पंचर रिपेयर' },
+      air: { bike: 30, car: 50, suv: 50, truck: 100, name: 'एयर रीफिल' },
+      stepney: { bike: 80, car: 150, suv: 150, truck: 300, name: 'स्टेफनी चेंज' }
+    };
+
+    let lastRatesFetchTime = 0;
+
+    function applyRatesUI(rates) {
+      if (!rates || typeof rates !== 'object') return;
+      currentRates = { ...DEFAULT_RATES, ...currentRates, ...rates };
+      const num = (v, def) => (Number.isFinite(Number(v)) && Number(v) >= 0) ? Number(v) : def;
+
+      BASE_VISIT_FEE = num(currentRates.baseVisit, 150);
+      FREE_KM_LIMIT = num(currentRates.freeKm, 2);
+      PER_KM_RATE = num(currentRates.perKm, 15);
+      FAST_SERVICE_SURCHARGE = num(currentRates.vipCharge, 150);
+      NIGHT_CHARGE_FEE = num(currentRates.nightCharge, 100);
+
+      const bikeP = num(currentRates.bikePuncture, 60);
+      const carP = num(currentRates.carPuncture, 100);
+      const tubeP = num(currentRates.tubePuncture, 120);
+      const stepP = num(currentRates.stepneyChange, 150);
+      const airP = num(currentRates.airRefill, 50);
+
+      SERVICE_PRICES.puncture.bike = bikeP;
+      SERVICE_PRICES.puncture.car = carP;
+      SERVICE_PRICES.puncture.suv = carP;
+      SERVICE_PRICES.puncture.truck = Math.round(carP * 2);
+
+      SERVICE_PRICES.air.bike = Math.round(airP * 0.6);
+      SERVICE_PRICES.air.car = airP;
+      SERVICE_PRICES.air.suv = airP;
+      SERVICE_PRICES.air.truck = Math.round(airP * 2);
+
+      SERVICE_PRICES.stepney.bike = stepP === 150 ? 80 : Math.round(stepP * 0.55);
+      SERVICE_PRICES.stepney.car = stepP;
+      SERVICE_PRICES.stepney.suv = stepP;
+      SERVICE_PRICES.stepney.truck = Math.round(stepP * 2);
+
+      // Update home service cards dynamically for current selected vehicle
+      const isEn = currentLang === 'en';
+      const visitSuffix = isEn ? ' + Visit Charges' : ' + विज़िट चार्ज';
+      const curPuncture = SERVICE_PRICES.puncture[selectedVehicle] ?? carP;
+      const curAir = SERVICE_PRICES.air[selectedVehicle] ?? airP;
+      const curStepney = SERVICE_PRICES.stepney[selectedVehicle] ?? stepP;
+
+      const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+      const setAttrTxt = (key, text) => {
+        if (I18N.hi && key in I18N.hi && !isEn) I18N.hi[key] = text;
+        if (I18N.en && key in I18N.en && isEn) I18N.en[key] = text;
+        document.querySelectorAll(`[data-i18n="${key}"]`).forEach(el => { el.innerText = text; });
+      };
+
+      setAttrTxt('srv_puncture_rate', `₹${curPuncture}${visitSuffix}`);
+      setAttrTxt('srv_air_rate', `₹${curAir}${visitSuffix}`);
+      setAttrTxt('srv_stepney_rate', `₹${curStepney}${visitSuffix}`);
+      setAttrTxt('vip_service_desc', isEn
+        ? `Skip queue, van arrives immediately (+₹${FAST_SERVICE_SURCHARGE})`
+        : `कतार छोड़कर तुरंत वैन आपके पास आएगी (+₹${FAST_SERVICE_SURCHARGE})`);
+
+      // Update Rate Card Screen
+      setAttrTxt('rate_base_text', isEn
+        ? `Base Visit Charge (First ${FREE_KM_LIMIT} KM)`
+        : `बेस विज़िट चार्ज (पहले ${FREE_KM_LIMIT} किमी तक)`);
+      setAttrTxt('rate_per_km_text', isEn
+        ? `Per Kilometer after ${FREE_KM_LIMIT} KM`
+        : `${FREE_KM_LIMIT} किमी के बाद प्रति किलोमीटर`);
+      setAttrTxt('night_charge_desc', isEn
+        ? `Emergency highway visits between 10:00 PM and 6:00 AM incur a ₹${NIGHT_CHARGE_FEE} night allowance.`
+        : `रात 10:00 बजे से सुबह 6:00 बजे के बीच इमरजेंसी ऑन-हाइवे विज़िट पर ₹${NIGHT_CHARGE_FEE} का नाइट अलाउंस लागू होता है।`);
+
+      setTxt('rc-base-visit', `₹${BASE_VISIT_FEE}`);
+      setTxt('rc-per-km', `₹${PER_KM_RATE} / KM`);
+      setTxt('rc-vip-charge', isEn ? `+₹${FAST_SERVICE_SURCHARGE} Extra` : `+₹${FAST_SERVICE_SURCHARGE} अतिरिक्त`);
+      setTxt('rc-bike-puncture', `₹${bikeP}`);
+      setTxt('rc-car-puncture', `₹${carP}`);
+      setTxt('rc-tube-puncture', `₹${tubeP}`);
+      setTxt('rc-stepney', `₹${stepP}`);
+      setTxt('rc-air', `₹${airP}`);
+      setTxt('booking-summary-fast-cost', `₹${FAST_SERVICE_SURCHARGE}`);
+
+      recalculateFare();
+    }
+
+    function loadRates() {
+      const now = Date.now();
+      if (customerServerBlocked403 && (now - lastRatesFetchTime < 15000)) return;
+      lastRatesFetchTime = now;
+
+      fetch(`${SERVER}/api/rates`)
+        .then(r => {
+          if (r.status === 403) {
+            customerServerBlocked403 = true;
+            throw new Error('HTTP 403 Forbidden');
+          }
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(data => {
+          customerServerBlocked403 = false;
+          if (data && typeof data === 'object' && data.baseVisit !== undefined) {
+            try { localStorage.setItem('pw_rates_config', JSON.stringify(data)); } catch(e) {}
+            applyRatesUI(data);
+          }
+        })
+        .catch(() => {});
+    }
+
     function recalculateFare() {
-      // Distance calculation: Base covers 2km, remaining at ₹15/km
-      let extraKm = Math.max(0, currentDistanceKm - 2);
+      // Distance calculation: Base covers FREE_KM_LIMIT, remaining at PER_KM_RATE
+      let extraKm = Math.max(0, currentDistanceKm - FREE_KM_LIMIT);
       let distanceCost = Math.round(BASE_VISIT_FEE + (extraKm * PER_KM_RATE));
-      
-      let serviceCost = SERVICE_PRICES[selectedServiceType][selectedVehicle] || 100;
+
+      const rawSrvPrice = SERVICE_PRICES[selectedServiceType]?.[selectedVehicle];
+      let serviceCost = (typeof rawSrvPrice === 'number') ? rawSrvPrice : 100;
       let total = distanceCost + serviceCost;
 
       if (isFastService) {
@@ -2631,7 +2759,7 @@
         activeBtn.classList.remove('border-slate-200', 'bg-white', 'text-slate-700');
         activeBtn.classList.add('border-amber-500', 'bg-amber-50', 'text-amber-900');
       }
-      recalculateFare();
+      applyRatesUI(currentRates);
     }
 
     function selectService(sType) {
@@ -4910,6 +5038,16 @@
           } catch(err){}
         });
 
+        customerSSE.addEventListener('rates-updated', e => {
+          try {
+            const rates = JSON.parse(e.data);
+            if (rates && typeof rates === 'object' && rates.baseVisit !== undefined) {
+              try { localStorage.setItem('pw_rates_config', JSON.stringify(rates)); } catch(err){}
+              applyRatesUI(rates);
+            }
+          } catch(err){}
+        });
+
         customerSSE.onerror = () => {
           try { customerSSE.close(); } catch(e){}
           customerSSERetryDelay = Math.min(customerSSERetryDelay * 1.5, 30000);
@@ -4918,6 +5056,15 @@
       } catch(e){}
     }
 
+    // Instant sync across browser tabs when rates update in Admin Panel
+    window.addEventListener('storage', e => {
+      if (e.key === 'pw_rates_config' && e.newValue) {
+        try {
+          applyRatesUI(JSON.parse(e.newValue));
+        } catch(err){}
+      }
+    });
+
     // Init
     initAuth();
     loadCustNotifications();
@@ -4925,14 +5072,16 @@
       applyMechanicContactUI(currentMechanicContact);
     }
     setAppLanguage(currentLang, true);
+    applyRatesUI(currentRates);
     loadSavedVehicleModels();
-    recalculateFare();
     pollVanStatus();
     setInterval(pollVanStatus, 15000);
     loadMechanicContact();
     setInterval(loadMechanicContact, 30000);
     loadShopLocation();
     setInterval(loadShopLocation, 60000);
+    loadRates();
+    setInterval(loadRates, 30000);
     connectCustomerLiveSSE();
     setTimeout(initHomeMap, 150);
   </script>
