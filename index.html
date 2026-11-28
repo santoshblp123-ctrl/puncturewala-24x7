@@ -1163,13 +1163,11 @@
             </div>
           </div>
 
-          <!-- Complete / Simulation Controls -->
-          <div class="flex gap-2">
-            <button onclick="simulateArrival()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition">
-              <span data-i18n="sim_closer_btn">वैन को नज़दीक लाएं (डेमो)</span>
-            </button>
-            <button onclick="cancelBookingPrompt()" class="text-xs bg-red-50 text-red-600 border border-red-200 font-bold px-3 py-2.5 rounded-xl hover:bg-red-100 transition">
-              <span data-i18n="cancel_btn">कैंसल</span>
+          <!-- Booking Cancel Control -->
+          <div class="pt-1">
+            <button onclick="cancelBookingPrompt()" class="w-full text-xs bg-red-50 text-red-600 border border-red-200 font-bold px-4 py-3 rounded-xl hover:bg-red-100 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-ban"></i>
+              <span data-i18n="cancel_btn">बुकिंग रद्द करें</span>
             </button>
           </div>
         </div>
@@ -1698,8 +1696,7 @@
         tracking_waiting: 'इंतज़ार करें...',
         direct_call_btn: 'सीधे कॉल करें',
         whatsapp_loc_btn: 'व्हाट्सएप लोकेशन',
-        sim_closer_btn: 'वैन को नज़दीक लाएं (डेमो)',
-        cancel_btn: 'कैंसल',
+        cancel_btn: 'बुकिंग रद्द करें',
 
         // Rate Screen
         rate_title: 'पारदर्शी रेट लिस्ट (Rate Card)',
@@ -1869,8 +1866,7 @@
         tracking_waiting: 'Please wait...',
         direct_call_btn: 'Call Directly',
         whatsapp_loc_btn: 'WhatsApp Location',
-        sim_closer_btn: 'Bring Van Closer (Demo)',
-        cancel_btn: 'Cancel',
+        cancel_btn: 'Cancel Booking',
 
         // Rate Screen
         rate_title: 'Transparent Rate Card',
@@ -3217,24 +3213,56 @@
       }
     }
 
-    function simulateArrival() {
-      const van = document.getElementById('tracking-van');
-      const bubble = document.getElementById('tracking-van-bubble-text');
-      const eta = document.getElementById('tracking-eta');
-
-      bubble.innerText = "वैन पहुँच चुकी है! (0 KM)";
-      van.style.bottom = "120px";
-      van.style.right = "170px";
-      eta.innerText = "वैन आपके पास पहुँच चुकी है!";
-      eta.className = "text-sm font-extrabold text-emerald-400";
-
-      showModal('fa-circle-check', 'वैन आ गई!', 'सर्विस वैन आपकी लोकेशन पर पहुँच चुकी है। कृपया वाहन के पास रहें।');
-    }
-
     function cancelBookingPrompt() {
-      if (confirm("क्या आप वाकई यह बुकिंग रद्द करना चाहते हैं?")) {
-        navigateTo('screen-home');
+      const confirmMsg = currentLang === 'en'
+        ? 'Are you sure you want to cancel this booking?'
+        : 'क्या आप वाकई यह बुकिंग रद्द करना चाहते हैं?';
+      if (!confirm(confirmMsg)) return;
+
+      const activeId = currentOrderId || generatedOrderId || (() => {
+        try { return localStorage.getItem('pw_active_order_id'); } catch (e) { return null; }
+      })();
+
+      window.orderCancelledNotified = true;
+      if (window.trackPollInterval) {
+        clearInterval(window.trackPollInterval);
+        window.trackPollInterval = null;
       }
+      if (trackSSE) {
+        try { trackSSE.close(); } catch (e) {}
+        trackSSE = null;
+      }
+
+      if (activeId) {
+        fetch(`${SERVER}/api/order-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: activeId,
+            status: 'cancelled',
+            reason: 'ग्राहक द्वारा बुकिंग रद्द की गई'
+          })
+        }).catch(() => {});
+      }
+
+      generatedOrderId = null;
+      currentOrderId = null;
+      isOrderActiveOnSite = false;
+      closeCustomerOtpModal();
+      const activeBanner = document.getElementById('home-active-booking-banner');
+      if (activeBanner) activeBanner.classList.add('hidden');
+      const onwayBanner = document.getElementById('mechanic-onway-banner');
+      if (onwayBanner) onwayBanner.classList.add('hidden');
+      try {
+        localStorage.removeItem('pw_active_order_id');
+        localStorage.removeItem('pw_active_order_lat');
+        localStorage.removeItem('pw_active_order_lng');
+      } catch (e) {}
+
+      if (typeof showToast === 'function') {
+        showToast(currentLang === 'en' ? 'Booking cancelled.' : 'बुकिंग रद्द कर दी गई है।', 'info');
+      }
+      navigateTo('screen-home');
     }
 
     // Screen Routing
