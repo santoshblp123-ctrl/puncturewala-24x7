@@ -14,6 +14,8 @@
   <meta name="apple-mobile-web-app-title" content="PunctureWala">
   <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
   <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase App, Auth & Messaging SDK for Real Google Sign-In & FCM -->
@@ -1559,6 +1561,60 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- 📱 Apple iPhone Install Popup Guide Modal -->
+  <div id="ios-install-modal" class="hidden fixed inset-0 z-[9990] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-amber-500/40 rounded-3xl max-w-sm w-full p-5 text-white shadow-2xl space-y-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center text-xl shadow-md shrink-0">
+            <i class="fa-brands fa-apple"></i>
+          </div>
+          <div>
+            <h3 id="ios-modal-title" class="font-black text-base text-white leading-tight">iPhone में ऐप इंस्टॉल करें</h3>
+            <p id="ios-modal-sub" class="text-[11px] text-amber-300 font-semibold mt-0.5">बिना App Store के 10 सेकंड में जोड़ें</p>
+          </div>
+        </div>
+        <button type="button" onclick="dismissIosInstallGuide(true)" aria-label="Close" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="ios-non-safari-warning" class="hidden bg-amber-500/15 border border-amber-500/40 rounded-2xl p-3 text-xs text-amber-200 space-y-2">
+        <p id="ios-non-safari-text" class="font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+          <span>कृपया पहले यह वेबसाइट <strong>Safari</strong> ब्राउज़र में खोलें (Chrome/WhatsApp में Add विकल्प नहीं दिखता)।</span>
+        </p>
+        <button type="button" onclick="copyCustomerUrlForSafari()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded-xl text-xs transition cursor-pointer">
+          <i class="fa-solid fa-copy mr-1"></i> <span id="ios-copy-btn-text">Safari के लिए लिंक कॉपी करें</span>
+        </button>
+      </div>
+
+      <div class="bg-slate-950/75 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 text-xs">
+        <div class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+          <p id="ios-step-1" class="text-slate-200 leading-relaxed">Safari में नीचे बीच वाले <strong class="text-amber-300"><i class="fa-solid fa-arrow-up-from-bracket mx-0.5"></i> Share</strong> बटन पर टैप करें।</p>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+          <p id="ios-step-2" class="text-slate-200 leading-relaxed">थोड़ा नीचे स्क्रॉल करके <strong class="text-amber-300">"Add to Home Screen"</strong> चुनें।</p>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+          <p id="ios-step-3" class="text-slate-200 leading-relaxed">ऊपर दाईं ओर <strong class="text-emerald-400">"Add"</strong> दबाएं — होम स्क्रीन पर PunctureWala ऐप तैयार!</p>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="copyCustomerUrlForSafari()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer shrink-0">
+          <i class="fa-solid fa-link"></i>
+        </button>
+        <button id="ios-done-btn" type="button" onclick="dismissIosInstallGuide(true)" class="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-slate-950 font-black py-2.5 rounded-xl text-xs transition cursor-pointer">
+          समझ गया / अभी नहीं
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ⛔ Fullscreen Blocking App Offline Popup Overlay (Controlled by Admin) -->
@@ -4820,7 +4876,85 @@
       if (installBtn) installBtn.classList.remove('hidden');
     });
 
+    function isIOSDevice() {
+      const ua = navigator.userAgent || '';
+      return /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function isStandalonePWA() {
+      return window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    }
+
+    function isIOSSafariBrowser() {
+      const ua = navigator.userAgent || '';
+      return isIOSDevice() && !/CriOS|FxiOS|EdgiOS|OPiOS|FBAN|FBAV|Instagram|WhatsApp/i.test(ua) && /Safari/i.test(ua);
+    }
+
+    function openIosInstallGuide() {
+      const modal = document.getElementById('ios-install-modal');
+      const warn = document.getElementById('ios-non-safari-warning');
+      const isEn = typeof currentLang !== 'undefined' && currentLang === 'en';
+      const setTxt = (id, htmlVal, isHtml = false) => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (isHtml) el.innerHTML = htmlVal;
+          else el.innerText = htmlVal;
+        }
+      };
+
+      if (isEn) {
+        setTxt('ios-modal-title', 'Install App on iPhone');
+        setTxt('ios-modal-sub', 'Add in 10 seconds without App Store');
+        setTxt('ios-non-safari-text', '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i><span>Please open this link in <strong>Safari</strong> browser first (Add to Home Screen appears only in Safari).</span>', true);
+        setTxt('ios-copy-btn-text', 'Copy Link for Safari');
+        setTxt('ios-step-1', 'Tap the <strong class="text-amber-300"><i class="fa-solid fa-arrow-up-from-bracket mx-0.5"></i> Share</strong> icon at the bottom center in Safari.', true);
+        setTxt('ios-step-2', 'Scroll down and tap <strong class="text-amber-300">"Add to Home Screen"</strong>.', true);
+        setTxt('ios-step-3', 'Tap <strong class="text-emerald-400">"Add"</strong> at top-right — PunctureWala app icon is ready!', true);
+        setTxt('ios-done-btn', 'Got It / Later');
+      } else {
+        setTxt('ios-modal-title', 'iPhone में ऐप इंस्टॉल करें');
+        setTxt('ios-modal-sub', 'बिना App Store के 10 सेकंड में जोड़ें');
+        setTxt('ios-non-safari-text', '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i><span>कृपया पहले यह वेबसाइट <strong>Safari</strong> ब्राउज़र में खोलें (Chrome/WhatsApp में Add विकल्प नहीं दिखता)।</span>', true);
+        setTxt('ios-copy-btn-text', 'Safari के लिए लिंक कॉपी करें');
+        setTxt('ios-step-1', 'Safari में नीचे बीच वाले <strong class="text-amber-300"><i class="fa-solid fa-arrow-up-from-bracket mx-0.5"></i> Share</strong> बटन पर टैप करें।', true);
+        setTxt('ios-step-2', 'थोड़ा नीचे स्क्रॉल करके <strong class="text-amber-300">"Add to Home Screen"</strong> चुनें।', true);
+        setTxt('ios-step-3', 'ऊपर दाईं ओर <strong class="text-emerald-400">"Add"</strong> दबाएं — होम स्क्रीन पर PunctureWala ऐप तैयार!', true);
+        setTxt('ios-done-btn', 'समझ गया / अभी नहीं');
+      }
+
+      if (warn) {
+        if (isIOSDevice() && !isIOSSafariBrowser()) warn.classList.remove('hidden');
+        else warn.classList.add('hidden');
+      }
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function dismissIosInstallGuide(remember = true) {
+      const modal = document.getElementById('ios-install-modal');
+      if (modal) modal.classList.add('hidden');
+      if (remember) {
+        try { localStorage.setItem('pw_ios_install_dismissed_at', String(Date.now())); } catch (e) {}
+      }
+    }
+
+    function copyCustomerUrlForSafari() {
+      const url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          if (typeof showToast === 'function') {
+            showToast(currentLang === 'en' ? '✅ Link copied! Open it in Safari and tap Add to Home Screen.' : '✅ लिंक कॉपी हुआ! अब Safari में खोलकर Add to Home Screen करें', 'success');
+          }
+        }).catch(() => { prompt('Copy URL for Safari:', url); });
+      } else {
+        prompt('Copy URL for Safari:', url);
+      }
+    }
+
     function promptInstallPWA() {
+      if (isIOSDevice() && !isStandalonePWA()) {
+        openIosInstallGuide();
+        return;
+      }
       if (deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(choiceResult => {
@@ -4833,6 +4967,20 @@
         alert('📲 ऐप इंस्टॉल करने के लिए:\nअपने ब्राउज़र के मेनू (तीन डॉट्स ⋮) पर टैप करें और "Add to Home screen" या "Install App" चुनें।');
       }
     }
+
+    (function initCustomerIosPwaPopup() {
+      const isNative = Boolean(window.AndroidBridge && typeof window.AndroidBridge.isNative === 'function' && window.AndroidBridge.isNative());
+      if (isNative || !isIOSDevice() || isStandalonePWA()) return;
+      try {
+        const lastDismissed = parseInt(localStorage.getItem('pw_ios_install_dismissed_at') || '0', 10);
+        if (lastDismissed && (Date.now() - lastDismissed) < 3 * 24 * 60 * 60 * 1000) return;
+      } catch (e) {}
+      setTimeout(() => {
+        if (typeof isAppOnline === 'undefined' || isAppOnline) {
+          openIosInstallGuide();
+        }
+      }, 2200);
+    })();
 
     // ══════════════════════════════════════════════
     //  PUSH & LOCAL NOTIFICATIONS SYSTEM
