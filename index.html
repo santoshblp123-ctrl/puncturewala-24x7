@@ -618,63 +618,82 @@
           <!-- Service Grid -->
           <div class="grid grid-cols-2 gap-3">
             <!-- Service 1: Puncture Repair -->
-            <div onclick="selectService('puncture')" id="card-service-puncture" class="cursor-pointer border-2 border-amber-500 bg-amber-50/50 rounded-2xl p-3 flex flex-col justify-between transition hover:shadow-md relative overflow-hidden group">
-              <div class="h-16 w-full rounded-xl overflow-hidden mb-2 relative shadow-inner">
-                <img src="puncture-banner.png" alt="पंचर रिपेयर" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                <span data-i18n="srv_popular" class="absolute top-1 right-1 text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.2 rounded shadow">सबसे लोकप्रिय</span>
+            <div onclick="selectService('puncture')" id="card-service-puncture" class="group cursor-pointer border-2 border-amber-500 bg-amber-50/50 rounded-2xl p-3.5 min-h-[144px] flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] shadow-md ring-2 ring-amber-400/25 relative overflow-hidden">
+              <div class="absolute -right-3 -bottom-3 text-amber-500/10 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-300">
+                <i class="fa-solid fa-circle-radiation"></i>
               </div>
-              <div class="flex items-start justify-between">
-                <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-900 flex items-center justify-center text-sm shadow-sm">
+              <div class="flex items-start justify-between gap-1.5 relative z-10">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center text-base shadow-md shadow-amber-500/25 shrink-0">
                   <i class="fa-solid fa-circle-radiation"></i>
                 </div>
-                <span class="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded">ऑन-साइट</span>
+                <span data-i18n="srv_popular" class="text-[9px] bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">सबसे लोकप्रिय</span>
               </div>
-              <div class="mt-2 relative z-10">
-                <h4 data-i18n="srv_puncture_title" class="font-bold text-xs text-slate-900">पंचर रिपेयर</h4>
-                <p data-i18n="srv_puncture_desc" class="text-[10px] text-slate-500">ट्यूबलेस / ट्यूब पंचर मरम्मत</p>
-                <p data-i18n="srv_puncture_rate" class="text-xs font-black text-amber-800 mt-0.5">₹100 + विज़िट चार्ज</p>
+              <div class="mt-3 relative z-10">
+                <h4 data-i18n="srv_puncture_title" class="font-extrabold text-[13px] leading-tight text-slate-900">पंचर रिपेयर</h4>
+                <p data-i18n="srv_puncture_desc" class="text-[10.5px] text-slate-500 mt-0.5 leading-snug">ट्यूबलेस / ट्यूब पंचर मरम्मत</p>
+                <div class="mt-2">
+                  <span data-i18n="srv_puncture_rate" class="inline-block text-[11px] font-black text-amber-900 bg-amber-100/90 border border-amber-200 px-2 py-0.5 rounded-lg">₹100 + विज़िट चार्ज</span>
+                </div>
               </div>
             </div>
 
             <!-- Service 2: Buy New/Old Tyre -->
-            <div onclick="navigateTo('screen-store')" class="cursor-pointer border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl p-3.5 flex flex-col justify-between transition hover:shadow-md relative overflow-hidden">
-              <div class="absolute -right-2 -bottom-2 text-slate-100 text-5xl">
+            <div onclick="navigateTo('screen-store')" class="group cursor-pointer border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl p-3.5 min-h-[144px] flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] shadow-sm relative overflow-hidden">
+              <div class="absolute -right-3 -bottom-3 text-slate-900/[0.05] text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-300">
                 <i class="fa-solid fa-ring"></i>
               </div>
-              <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center text-lg shadow-sm">
+              <div class="flex items-start justify-between gap-1.5 relative z-10">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-950 text-amber-400 flex items-center justify-center text-base shadow-md shadow-slate-900/20 shrink-0">
                   <i class="fa-solid fa-cart-shopping"></i>
                 </div>
-                <span data-i18n="srv_tyre_badge" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">वैन स्टॉक</span>
+                <span data-i18n="srv_tyre_badge" class="text-[9px] bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap">वैन स्टॉक</span>
               </div>
               <div class="mt-3 relative z-10">
-                <h4 data-i18n="srv_tyre_title" class="font-bold text-xs text-slate-900">नया/पुराना टायर लें</h4>
-                <p data-i18n="srv_tyre_desc" class="text-[10px] text-slate-500">वैन में मौजूद टायर डिलीवर व फिटिंग</p>
-                <p data-i18n="srv_tyre_rate" class="text-xs font-black text-emerald-700 mt-1">MRP पर फ्री फिटिंग</p>
+                <h4 data-i18n="srv_tyre_title" class="font-extrabold text-[13px] leading-tight text-slate-900">नया/पुराना टायर लें</h4>
+                <p data-i18n="srv_tyre_desc" class="text-[10.5px] text-slate-500 mt-0.5 leading-snug">वैन में मौजूद टायर डिलीवर व फिटिंग</p>
+                <div class="mt-2">
+                  <span data-i18n="srv_tyre_rate" class="inline-block text-[11px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">MRP पर फ्री फिटिंग</span>
+                </div>
               </div>
             </div>
 
             <!-- Service 3: Air & Pressure Check -->
-            <div onclick="selectService('air')" id="card-service-air" class="cursor-pointer border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl p-3.5 flex flex-col justify-between transition hover:shadow-md">
-              <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg">
+            <div onclick="selectService('air')" id="card-service-air" class="group cursor-pointer border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl p-3.5 min-h-[144px] flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] shadow-sm relative overflow-hidden">
+              <div class="absolute -right-3 -bottom-3 text-sky-500/10 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-300">
                 <i class="fa-solid fa-gauge-high"></i>
               </div>
-              <div class="mt-3">
-                <h4 data-i18n="srv_air_title" class="font-bold text-xs text-slate-900">एयर / नाइट्रोजन रीफिल</h4>
-                <p data-i18n="srv_air_desc" class="text-[10px] text-slate-500">डिजिटल गेज से प्रेशर चेक</p>
-                <p data-i18n="srv_air_rate" class="text-xs font-black text-slate-800 mt-1">₹50 + विज़िट चार्ज</p>
+              <div class="flex items-start justify-between gap-1.5 relative z-10">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 text-white flex items-center justify-center text-base shadow-md shadow-sky-500/25 shrink-0">
+                  <i class="fa-solid fa-gauge-high"></i>
+                </div>
+                <span class="text-[9px] bg-sky-100 text-sky-800 border border-sky-200 font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap">Digital PSI</span>
+              </div>
+              <div class="mt-3 relative z-10">
+                <h4 data-i18n="srv_air_title" class="font-extrabold text-[13px] leading-tight text-slate-900">एयर / नाइट्रोजन रीफिल</h4>
+                <p data-i18n="srv_air_desc" class="text-[10.5px] text-slate-500 mt-0.5 leading-snug">डिजिटल गेज से प्रेशर चेक</p>
+                <div class="mt-2">
+                  <span data-i18n="srv_air_rate" class="inline-block text-[11px] font-black text-sky-900 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-lg">₹50 + विज़िट चार्ज</span>
+                </div>
               </div>
             </div>
 
             <!-- Service 4: Complete Tyre Replacement / Stepney -->
-            <div onclick="selectService('stepney')" id="card-service-stepney" class="cursor-pointer border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl p-3.5 flex flex-col justify-between transition hover:shadow-md">
-              <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg">
+            <div onclick="selectService('stepney')" id="card-service-stepney" class="group cursor-pointer border-2 border-slate-200 bg-white hover:border-slate-300 rounded-2xl p-3.5 min-h-[144px] flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] shadow-sm relative overflow-hidden">
+              <div class="absolute -right-3 -bottom-3 text-purple-500/10 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-300">
                 <i class="fa-solid fa-arrows-rotate"></i>
               </div>
-              <div class="mt-3">
-                <h4 data-i18n="srv_stepney_title" class="font-bold text-xs text-slate-900">स्टेफनी चेंज / फिटिंग</h4>
-                <p data-i18n="srv_stepney_desc" class="text-[10px] text-slate-500">जैक लगाकर टायर बदलना</p>
-                <p data-i18n="srv_stepney_rate" class="text-xs font-black text-slate-800 mt-1">₹150 + विज़िट चार्ज</p>
+              <div class="flex items-start justify-between gap-1.5 relative z-10">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 text-white flex items-center justify-center text-base shadow-md shadow-purple-500/25 shrink-0">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </div>
+                <span class="text-[9px] bg-purple-100 text-purple-800 border border-purple-200 font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap">Jack & Tools</span>
+              </div>
+              <div class="mt-3 relative z-10">
+                <h4 data-i18n="srv_stepney_title" class="font-extrabold text-[13px] leading-tight text-slate-900">स्टेफनी चेंज / फिटिंग</h4>
+                <p data-i18n="srv_stepney_desc" class="text-[10.5px] text-slate-500 mt-0.5 leading-snug">जैक लगाकर टायर बदलना</p>
+                <div class="mt-2">
+                  <span data-i18n="srv_stepney_rate" class="inline-block text-[11px] font-black text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-lg">₹150 + विज़िट चार्ज</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2764,11 +2783,11 @@
         const el = document.getElementById(`card-service-${id}`);
         if (el) {
           if (id === sType) {
-            el.classList.add('border-amber-500', 'bg-amber-50/50');
-            el.classList.remove('border-slate-200', 'bg-white');
+            el.classList.add('border-amber-500', 'bg-amber-50/50', 'shadow-md', 'ring-2', 'ring-amber-400/25');
+            el.classList.remove('border-slate-200', 'bg-white', 'shadow-sm');
           } else {
-            el.classList.remove('border-amber-500', 'bg-amber-50/50');
-            el.classList.add('border-slate-200', 'bg-white');
+            el.classList.remove('border-amber-500', 'bg-amber-50/50', 'shadow-md', 'ring-2', 'ring-amber-400/25');
+            el.classList.add('border-slate-200', 'bg-white', 'shadow-sm');
           }
         }
       });
