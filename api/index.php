@@ -62,7 +62,7 @@ function getDefaultRates() {
 // Initialize default state if not exists
 if (!file_exists($stateFile)) {
     $defaultState = [
-        'vanStatus' => ['free' => true, 'busyMinutes' => 0],
+        'vanStatus' => ['free' => true, 'busyMinutes' => 0, 'appOnline' => true, 'offlineReason' => ''],
         'mechanicContact' => [
             'name' => 'SANTOSH (ऑन-ड्यूटी)',
             'phone' => '9876543210',
@@ -193,6 +193,11 @@ if ($route === 'orders' && $method === 'GET') {
 if ($route === 'book' && $method === 'POST') {
     $body = getRequestBody();
     $state = getState();
+    $vs = $state['vanStatus'] ?? [];
+    if (isset($vs['appOnline']) && $vs['appOnline'] === false) {
+        $reason = !empty($vs['offlineReason']) ? $vs['offlineReason'] : 'ऐप अभी एडमिन द्वारा ऑफलाइन (बंद) की गई है।';
+        jsonResponse(['success' => false, 'offline' => true, 'error' => $reason], 503);
+    }
     $counter = ($state['orderCounter'] ?? 1000) + 1;
     $state['orderCounter'] = $counter;
     saveState($state);
@@ -320,11 +325,15 @@ if ($route === 'verify-otp' && $method === 'POST') {
 if ($route === 'van-status') {
     $state = getState();
     if ($method === 'GET') {
-        jsonResponse($state['vanStatus'] ?? ['free' => true, 'busyMinutes' => 0]);
+        $vs = array_merge(['free' => true, 'busyMinutes' => 0, 'appOnline' => true, 'offlineReason' => ''], $state['vanStatus'] ?? []);
+        jsonResponse($vs);
     }
     if ($method === 'POST') {
         $body = getRequestBody();
-        $state['vanStatus'] = array_merge($state['vanStatus'] ?? [], $body);
+        $vs = array_merge(['free' => true, 'busyMinutes' => 0, 'appOnline' => true, 'offlineReason' => ''], $state['vanStatus'] ?? [], $body);
+        if (isset($body['appOnline'])) $vs['appOnline'] = (bool)$body['appOnline'];
+        if (isset($body['offlineReason'])) $vs['offlineReason'] = trim((string)$body['offlineReason']);
+        $state['vanStatus'] = $vs;
         saveState($state);
         jsonResponse(['success' => true, 'vanStatus' => $state['vanStatus']]);
     }

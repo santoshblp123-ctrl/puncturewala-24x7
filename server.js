@@ -82,7 +82,7 @@ function loadUsersFromDisk() {
 loadUsersFromDisk();
 
 let orderCounter = 1000;
-let vanStatus = { free: true, busyMinutes: 0 };
+let vanStatus = { free: true, busyMinutes: 0, appOnline: true, offlineReason: '' };
 let adminClients = []; // SSE connections from Admin
 let customerClients = {}; // SSE connections from Customer { orderId: [res,...] }
 let mechanicLocs = {}; // Latest mechanic location per orderId
@@ -143,8 +143,9 @@ function loadStateFromDisk() {
       if (typeof stateData.orderCounter === 'number' && stateData.orderCounter > orderCounter) {
         orderCounter = stateData.orderCounter;
       }
-      if (stateData.vanStatus && typeof stateData.vanStatus.free === 'boolean') {
+      if (stateData.vanStatus && typeof stateData.vanStatus === 'object') {
         vanStatus = { ...vanStatus, ...stateData.vanStatus };
+        if (typeof vanStatus.appOnline !== 'boolean') vanStatus.appOnline = true;
       }
       if (stateData.mechanicContact && stateData.mechanicContact.phone) {
         mechanicContact = { ...mechanicContact, ...stateData.mechanicContact };
@@ -265,6 +266,13 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/book ──────────────────────────────────────────────────────
   if (path === '/api/book' && method === 'POST') {
+    if (vanStatus.appOnline === false) {
+      return json(res, {
+        success: false,
+        offline: true,
+        error: vanStatus.offlineReason || 'ऐप अभी एडमिन द्वारा ऑफलाइन (बंद) की गई है।'
+      }, 503);
+    }
     const body = await readBody(req);
     const orderId = genOrderId();
     const otp = String(Math.floor(1000 + Math.random() * 9000));
@@ -973,13 +981,15 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET/POST /api/van-status ─────────────────────────────────────────────
   if (path === '/api/van-status') {
-    if (method === 'GET')  return json(res, vanStatus);
+    if (method === 'GET')  return json(res, { appOnline: true, offlineReason: '', ...vanStatus });
     if (method === 'POST') {
       const body = await readBody(req);
       vanStatus  = { ...vanStatus, ...body };
+      if (typeof body.appOnline === 'boolean') vanStatus.appOnline = body.appOnline;
+      if (typeof body.offlineReason === 'string') vanStatus.offlineReason = body.offlineReason.trim();
       saveStateToDisk();
       pushToAdmin('van-status', vanStatus);
-      console.log(`[VAN STATUS] free=${vanStatus.free}`);
+      console.log(`[VAN STATUS] free=${vanStatus.free} appOnline=${vanStatus.appOnline}`);
       return json(res, { success: true, vanStatus });
     }
   }

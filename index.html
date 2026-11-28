@@ -1561,6 +1561,48 @@
 
   </div>
 
+  <!-- ⛔ Fullscreen Blocking App Offline Popup Overlay (Controlled by Admin) -->
+  <div id="app-offline-overlay" class="fixed inset-0 z-[9999] hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-5">
+    <div class="bg-slate-900 border-2 border-red-500/60 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl text-white space-y-4">
+      <div class="mx-auto w-20 h-20 rounded-full bg-red-500/15 border-2 border-red-500/50 flex items-center justify-center relative">
+        <span class="absolute inset-0 rounded-full bg-red-500/20 animate-ping"></span>
+        <i class="fa-solid fa-power-off text-red-500 text-3xl relative z-10"></i>
+      </div>
+      <div class="inline-flex items-center gap-1.5 bg-red-600/25 border border-red-500/40 text-red-300 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span>Service Offline • सेवा बंद</span>
+      </div>
+      <div>
+        <h2 id="offline-popup-title" class="text-xl font-black text-white">ऐप अभी ऑफलाइन है</h2>
+        <p id="offline-popup-subtitle" class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+          एडमिन द्वारा अभी ऐप को अस्थायी रूप से ऑफलाइन (बंद) किया गया है। अभी ऐप नहीं चलेगी और नई बुकिंग बंद है।
+        </p>
+      </div>
+      <div id="offline-reason-box" class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 text-left">
+        <span class="text-[10px] font-extrabold text-red-400 uppercase tracking-wider block">सूचना (Notice):</span>
+        <p id="offline-reason-text" class="text-xs font-bold text-slate-200 mt-1 leading-relaxed">
+          कृपया थोड़ी देर बाद पुनः प्रयास करें। एडमिन के ऑनलाइन करते ही ऐप अपने आप चालू हो जाएगी।
+        </p>
+      </div>
+      <div class="space-y-2.5 pt-1">
+        <button id="offline-retry-btn" type="button" onclick="pollVanStatus(true)"
+          class="w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-slate-950 font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg cursor-pointer">
+          <i class="fa-solid fa-rotate"></i>
+          <span>स्टेटस दोबारा जांचें (Refresh)</span>
+        </button>
+        <a id="offline-call-link" href="tel:9876543210"
+          class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-phone text-emerald-400"></i>
+          <span>आपातकालीन कॉल (Helpline)</span>
+        </a>
+      </div>
+      <p id="offline-live-note" class="text-[10px] text-slate-400 flex items-center justify-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>ऑनलाइन होते ही ऐप अपने आप अनलॉक हो जाएगी</span>
+      </p>
+    </div>
+  </div>
+
   <script>
     // ── Global Server URL Resolution (Hostinger & Localhost Unified) ──
     const SERVER = (function() {
@@ -2841,6 +2883,58 @@
       );
     }
 
+    let isAppOnline = true;
+    let currentOfflineReason = '';
+
+    function applyAppOnlineStatus(online, reason = '') {
+      const wasOffline = !isAppOnline;
+      isAppOnline = online !== false;
+      currentOfflineReason = typeof reason === 'string' ? reason.trim() : '';
+
+      const overlay = document.getElementById('app-offline-overlay');
+      const titleEl = document.getElementById('offline-popup-title');
+      const subEl = document.getElementById('offline-popup-subtitle');
+      const reasonEl = document.getElementById('offline-reason-text');
+      const callLink = document.getElementById('offline-call-link');
+      const headerDot = document.getElementById('header-status-dot');
+      const headerText = document.getElementById('header-status-text');
+
+      if (!isAppOnline) {
+        if (titleEl) {
+          titleEl.innerText = currentLang === 'en' ? 'App is Currently Offline' : 'ऐप अभी ऑफलाइन है';
+        }
+        if (subEl) {
+          subEl.innerText = currentLang === 'en'
+            ? 'The admin has temporarily paused the service. Booking and app access are currently unavailable.'
+            : 'एडमिन द्वारा अभी ऐप को अस्थायी रूप से ऑफलाइन (बंद) किया गया है। अभी ऐप नहीं चलेगी और नई बुकिंग बंद है।';
+        }
+        if (reasonEl) {
+          reasonEl.innerText = currentOfflineReason || (currentLang === 'en'
+            ? 'Please try again after a short while. The app will unlock automatically once the admin goes online.'
+            : 'कृपया थोड़ी देर बाद पुनः प्रयास करें। एडमिन के ऑनलाइन करते ही ऐप अपने आप चालू हो जाएगी।');
+        }
+        if (callLink && typeof currentMechanicContact !== 'undefined' && currentMechanicContact.phone) {
+          callLink.href = `tel:${String(currentMechanicContact.phone).replace(/[^0-9+]/g, '')}`;
+        }
+        if (headerDot) headerDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse';
+        if (headerText) {
+          headerText.innerText = currentLang === 'en' ? 'Offline' : 'ऑफलाइन (बंद)';
+          headerText.className = 'text-[11px] text-red-400 font-bold';
+        }
+        if (overlay) overlay.classList.remove('hidden');
+        try { document.body.style.overflow = 'hidden'; } catch (e) {}
+      } else {
+        if (overlay) overlay.classList.add('hidden');
+        try { document.body.style.overflow = ''; } catch (e) {}
+        if (wasOffline) {
+          applyVanStatus(!isVanBusy, busyMinutesLeft, 1);
+          if (typeof showToast === 'function') {
+            showToast(currentLang === 'en' ? '🟢 App is back online!' : '🟢 ऐप अब ऑनलाइन है! सेवा चालू हो गई।', 'success');
+          }
+        }
+      }
+    }
+
     // Apply real-time Van Free/Busy state
     function applyVanStatus(isFree, busyMins = 16, queue = 1) {
       isVanBusy = !isFree;
@@ -2850,6 +2944,15 @@
       const busyBanner = document.getElementById('van-busy-banner');
       const timerEl = document.getElementById('timer-minutes');
       const queueEl = document.getElementById('van-queue-badge');
+
+      if (!isAppOnline) {
+        if (headerDot) headerDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse';
+        if (headerText) {
+          headerText.innerText = currentLang === 'en' ? 'Offline' : 'ऑफलाइन (बंद)';
+          headerText.className = 'text-[11px] text-red-400 font-bold';
+        }
+        return;
+      }
 
       if (isVanBusy) {
         if (headerDot) headerDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
@@ -2894,9 +2997,9 @@
       }).catch(() => {});
     }
 
-    function pollVanStatus() {
+    function pollVanStatus(manual = false) {
       const now = Date.now();
-      if (customerServerBlocked403 && (now - lastVanPollTime < 15000)) return;
+      if (!manual && customerServerBlocked403 && (now - lastVanPollTime < 15000)) return;
       lastVanPollTime = now;
 
       fetch(`${SERVER}/api/van-status`)
@@ -2909,11 +3012,25 @@
         })
         .then(data => {
           customerServerBlocked403 = false;
-          if (data && typeof data.free === 'boolean') {
-            applyVanStatus(data.free, data.busyMinutes || 15, data.queueCount || 1);
+          if (data && typeof data === 'object') {
+            if (typeof data.appOnline === 'boolean') {
+              applyAppOnlineStatus(data.appOnline, data.offlineReason || '');
+            } else {
+              applyAppOnlineStatus(true, '');
+            }
+            if (typeof data.free === 'boolean') {
+              applyVanStatus(data.free, data.busyMinutes || 15, data.queueCount || 1);
+            }
+            if (manual && data.appOnline === false && typeof showToast === 'function') {
+              showToast(currentLang === 'en' ? 'Still offline — please wait.' : 'ऐप अभी भी ऑफलाइन है — कृपया प्रतीक्षा करें।', 'info');
+            }
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (manual && typeof showToast === 'function') {
+            showToast(currentLang === 'en' ? 'Unable to reach server.' : 'सर्वर से संपर्क नहीं हो पा रहा है।', 'info');
+          }
+        });
     }
 
     let currentLat = 31.3325, currentLng = 76.8780; // default near NH-205 Bilaspur (HP) shop
@@ -3093,6 +3210,11 @@
 
       closeBookingPreconfirmModal();
 
+      if (!isAppOnline) {
+        applyAppOnlineStatus(false, currentOfflineReason);
+        return;
+      }
+
       if (!pendingBookingPayload) return;
       const { custName, custPhone, vehicleModel, vehicleNum, fareInfo, etaMin, address } = pendingBookingPayload;
 
@@ -3159,13 +3281,27 @@
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify(payload),
         })
-        .then(r => {
+        .then(async r => {
           if (r.status === 403) customerServerBlocked403 = true;
+          if (r.status === 503) {
+            let errBody = {};
+            try { errBody = await r.json(); } catch (e) {}
+            const offlineErr = new Error(errBody.error || 'App offline');
+            offlineErr.offline = true;
+            offlineErr.reason = errBody.error || '';
+            throw offlineErr;
+          }
           if (!r.ok) throw new Error('HTTP ' + r.status);
           customerServerBlocked403 = false;
           return r.json();
         })
         .then(data => {
+          if (data && data.offline) {
+            const offlineErr = new Error(data.error || 'App offline');
+            offlineErr.offline = true;
+            offlineErr.reason = data.error || '';
+            throw offlineErr;
+          }
           const orderId = data.orderId || 'PW-???';
           const otp = data.otp || String(Math.floor(1000 + Math.random() * 9000));
           populateConfirmScreen(orderId, otp);
@@ -3180,7 +3316,12 @@
           // Start live mechanic tracking
           startCustomerTracking(orderId, lat, lng);
         })
-        .catch(() => {
+        .catch(err => {
+          if (err && err.offline) {
+            navigateTo('screen-home');
+            applyAppOnlineStatus(false, err.reason || '');
+            return;
+          }
           // Server offline — still show confirmation with local ID
           const offlineId = 'PW-' + Math.floor(1000 + Math.random() * 9000);
           const offlineOtp = String(Math.floor(1000 + Math.random() * 9000));
@@ -5124,8 +5265,13 @@
         customerSSE.addEventListener('van-status', e => {
           try {
             const data = JSON.parse(e.data);
-            if (data && typeof data.free === 'boolean') {
-              applyVanStatus(data.free, data.busyMinutes || 15, data.queueCount || 1);
+            if (data && typeof data === 'object') {
+              if (typeof data.appOnline === 'boolean') {
+                applyAppOnlineStatus(data.appOnline, data.offlineReason || '');
+              }
+              if (typeof data.free === 'boolean') {
+                applyVanStatus(data.free, data.busyMinutes || 15, data.queueCount || 1);
+              }
             }
           } catch(err){}
         });
@@ -5176,7 +5322,10 @@
     applyRatesUI(currentRates);
     loadSavedVehicleModels();
     pollVanStatus();
-    setInterval(pollVanStatus, 15000);
+    setInterval(pollVanStatus, 5000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pollVanStatus();
+    });
     loadMechanicContact();
     setInterval(loadMechanicContact, 30000);
     loadShopLocation();
