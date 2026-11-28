@@ -69,57 +69,79 @@ if (!file_exists($stateFile)) {
     file_put_contents($stateFile, json_encode($defaultState, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+function safeReadJson($filePath, $default = []) {
+    if (!file_exists($filePath)) return $default;
+    $fp = @fopen($filePath, 'rb');
+    if (!$fp) return $default;
+    @flock($fp, LOCK_SH);
+    $data = @stream_get_contents($fp);
+    @flock($fp, LOCK_UN);
+    @fclose($fp);
+    if (empty($data)) return $default;
+    $decoded = json_decode($data, true);
+    return is_array($decoded) ? $decoded : $default;
+}
+
+function safeWriteJson($filePath, $data) {
+    $dir = dirname($filePath);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $fp = @fopen($filePath, 'c+b');
+    if (!$fp) {
+        return @file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) !== false;
+    }
+    @flock($fp, LOCK_EX);
+    @ftruncate($fp, 0);
+    @fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    @fflush($fp);
+    @flock($fp, LOCK_UN);
+    @fclose($fp);
+    return true;
+}
+
 function getOrders() {
     global $ordersFile;
-    if (!file_exists($ordersFile)) return [];
-    $data = file_get_contents($ordersFile);
-    return json_decode($data, true) ?: [];
+    return safeReadJson($ordersFile, []);
 }
 
 function saveOrders($orders) {
     global $ordersFile;
-    file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    return safeWriteJson($ordersFile, $orders);
 }
 
 function getUsers() {
     global $usersFile;
-    if (!file_exists($usersFile)) return [];
-    $data = file_get_contents($usersFile);
-    return json_decode($data, true) ?: [];
+    return safeReadJson($usersFile, []);
 }
 
 function saveUsers($users) {
     global $usersFile;
-    file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    return safeWriteJson($usersFile, $users);
 }
 
 function getMechanics() {
     global $mechanicsFile;
-    if (!file_exists($mechanicsFile)) {
-        return [
-            ['id' => 'M-1', 'name' => 'संतोष मिस्त्री', 'role' => 'वरिष्ठ टेक्नीशियन', 'phone' => '9876543210', 'vehicle' => 'HP64-BT-9821', 'ordersToday' => 12, 'rating' => '4.9', 'status' => 'free'],
-            ['id' => 'M-2', 'name' => 'सुरेश कुमार', 'role' => 'टेक्नीशियन', 'phone' => '9876543211', 'vehicle' => 'DL3C-AE-7740', 'ordersToday' => 9, 'rating' => '4.7', 'status' => 'busy']
-        ];
-    }
-    $data = file_get_contents($mechanicsFile);
-    return json_decode($data, true) ?: [];
+    $default = [
+        ['id' => 'M-1', 'name' => 'संतोष मिस्त्री', 'role' => 'वरिष्ठ तकनीशियन', 'phone' => '9876543210', 'vehicle' => 'HP64-BT-9821', 'ordersToday' => 12, 'rating' => '4.9', 'status' => 'free'],
+        ['id' => 'M-2', 'name' => 'सुरेश कुमार', 'role' => 'तकनीशियन', 'phone' => '9876543211', 'vehicle' => 'DL3C-AE-7740', 'ordersToday' => 9, 'rating' => '4.7', 'status' => 'busy']
+    ];
+    return safeReadJson($mechanicsFile, $default);
 }
 
 function saveMechanics($mechanics) {
     global $mechanicsFile;
-    file_put_contents($mechanicsFile, json_encode($mechanics, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    return safeWriteJson($mechanicsFile, $mechanics);
 }
 
 function getState() {
     global $stateFile;
-    if (!file_exists($stateFile)) return [];
-    $data = file_get_contents($stateFile);
-    return json_decode($data, true) ?: [];
+    return safeReadJson($stateFile, []);
 }
 
 function saveState($state) {
     global $stateFile;
-    file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    return safeWriteJson($stateFile, $state);
 }
 
 function getRequestBody() {

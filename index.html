@@ -4928,11 +4928,11 @@
     loadSavedVehicleModels();
     recalculateFare();
     pollVanStatus();
-    setInterval(pollVanStatus, 5000);
+    setInterval(pollVanStatus, 15000);
     loadMechanicContact();
-    setInterval(loadMechanicContact, 2000);
+    setInterval(loadMechanicContact, 30000);
     loadShopLocation();
-    setInterval(loadShopLocation, 6000);
+    setInterval(loadShopLocation, 60000);
     connectCustomerLiveSSE();
     setTimeout(initHomeMap, 150);
   </script>
